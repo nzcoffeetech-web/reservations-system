@@ -1,9 +1,8 @@
 import { Resend } from 'resend';
 
 export const POST = async ({ request }) => {
-  // 1. Initialize Resend with your Key
   const apiKey = import.meta.env.RESEND_API_KEY;
-  
+
   if (!apiKey) {
     return new Response(JSON.stringify({ error: "Server Error: Missing API Key" }), { status: 500 });
   }
@@ -11,14 +10,21 @@ export const POST = async ({ request }) => {
   const resend = new Resend(apiKey);
 
   try {
-    // 2. Get the Booking Data from the Frontend
     const body = await request.json();
-    const { bookingData } = body; // We expect { name, email, date, time, table }
+    const { bookingData } = body;
 
-    // 3. Send the Email using the SDK
+    // 🚀 PRODUCTION SEND
     const { data, error } = await resend.emails.send({
-      from: 'NZ Coffee <onboarding@resend.dev>', // ⚠️ KEEP THIS until you verify your domain
-      to: [bookingData.email], // This will fail if not sent to YOUR registered email (while in test mode)
+      // 1. PROFESSIONAL SENDER ADDRESS
+      // (Since your DKIM is verified on the root, this looks great!)
+      from: 'NZ Coffee <reservations@nzcoffee.work>', 
+      
+      // 2. SEND TO THE REAL CUSTOMER
+      to: [bookingData.email], 
+      
+      // (Optional) BCC yourself so you also get a copy of every booking
+      bcc: ['khairulazri.sha@gmail.com'],
+
       subject: `Booking Confirmed: ${bookingData.date}`,
       html: `
         <div style="font-family: sans-serif; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #e5e5e5; padding: 20px;">
@@ -41,7 +47,6 @@ export const POST = async ({ request }) => {
       `
     });
 
-    // 4. Handle Success or Failure
     if (error) {
       console.error("Resend Error:", error);
       return new Response(JSON.stringify({ error: error.message }), { status: 400 });
