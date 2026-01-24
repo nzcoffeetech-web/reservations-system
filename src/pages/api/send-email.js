@@ -1,43 +1,56 @@
+import { Resend } from 'resend';
+
 export const POST = async ({ request }) => {
-    console.log("--> 1. API HIT: /api/send-email");
+  // 1. Initialize Resend with your Key
+  const apiKey = import.meta.env.RESEND_API_KEY;
   
-    const RESEND_API_KEY = import.meta.env.RESEND_API_KEY; 
-    console.log(`--> 2. KEY CHECK: ${RESEND_API_KEY ? "EXISTS" : "MISSING"} (Length: ${RESEND_API_KEY?.length})`);
-  
-    if (!RESEND_API_KEY) return new Response(JSON.stringify({ error: "No Key" }), { status: 500 });
-  
-    try {
-      const body = await request.json();
-      const userEmail = body.bookingData?.email;
-      
-      console.log(`--> 3. TARGET EMAIL: ${userEmail}`);
-      
-      // ⚠️ IMPORTANT: We hardcode 'onboarding@resend.dev' for the FROM address
-      const payload = {
-        from: 'NZ Coffee <onboarding@resend.dev>',
-        to: [userEmail], 
-        subject: "Test Email",
-        html: "<p>If you see this, it works!</p>"
-      };
-      
-      console.log("--> 4. SENDING PAYLOAD:", JSON.stringify(payload));
-  
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${RESEND_API_KEY}`
-        },
-        body: JSON.stringify(payload)
-      });
-  
-      const data = await response.json();
-      console.log("--> 5. RESEND RESPONSE:", JSON.stringify(data));
-  
-      return new Response(JSON.stringify(data), { status: 200 });
-  
-    } catch (error) {
-      console.error("--> FATAL ERROR:", error);
-      return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: "Server Error: Missing API Key" }), { status: 500 });
+  }
+
+  const resend = new Resend(apiKey);
+
+  try {
+    // 2. Get the Booking Data from the Frontend
+    const body = await request.json();
+    const { bookingData } = body; // We expect { name, email, date, time, table }
+
+    // 3. Send the Email using the SDK
+    const { data, error } = await resend.emails.send({
+      from: 'NZ Coffee <onboarding@resend.dev>', // ⚠️ KEEP THIS until you verify your domain
+      to: [bookingData.email], // This will fail if not sent to YOUR registered email (while in test mode)
+      subject: `Booking Confirmed: ${bookingData.date}`,
+      html: `
+        <div style="font-family: sans-serif; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #e5e5e5; padding: 20px;">
+          <h1 style="color: #C08D5D; text-align: center; font-size: 24px;">Reservation Confirmed</h1>
+          <hr style="border: 0; border-bottom: 1px solid #eee; margin: 20px 0;">
+          
+          <p>Hi <strong>${bookingData.name}</strong>,</p>
+          <p>We look forward to hosting you at NZ Coffee.</p>
+          
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${bookingData.date}</p>
+            <p style="margin: 5px 0;"><strong>⏰ Time:</strong> ${bookingData.time}</p>
+            <p style="margin: 5px 0;"><strong>🪑 Table:</strong> ${bookingData.table}</p>
+          </div>
+          
+          <p style="font-size: 12px; color: #888; text-align: center; margin-top: 30px;">
+            NZ Coffee Reservations • Seremban, Malaysia
+          </p>
+        </div>
+      `
+    });
+
+    // 4. Handle Success or Failure
+    if (error) {
+      console.error("Resend Error:", error);
+      return new Response(JSON.stringify({ error: error.message }), { status: 400 });
     }
-  };
+
+    return new Response(JSON.stringify({ success: true, id: data.id }), { status: 200 });
+
+  } catch (err) {
+    console.error("Unexpected Error:", err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+};
