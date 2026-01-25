@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { format, addHours, isBefore, parseISO, getDay, addDays } from 'date-fns';
-import { Users, Sun, Armchair, Star, Clock, UtensilsCrossed, CheckCircle, CalendarX, Lock, Calendar, Info } from 'lucide-react';
+import { Users, Sun, Armchair, Star, Clock, UtensilsCrossed, CheckCircle, CalendarX, Lock, Calendar, Info, CalendarCheck } from 'lucide-react';
 
 export default function BookingMap() {
   // --- State ---
@@ -104,7 +104,6 @@ export default function BookingMap() {
       const { data } = await supabase.from('tables').select('*');
       
       if (data) {
-        // Custom Sort: Outdoor -> Indoor -> Private
         const sortOrder = ['outdoor', 'indoor', 'vip'];
         const sorted = data.sort((a, b) => 
           sortOrder.indexOf(a.section) - sortOrder.indexOf(b.section)
@@ -168,11 +167,9 @@ export default function BookingMap() {
     return <Star size={24} />;
   };
 
-  // --- New: Get Placeholder Image ---
   const getZoneImage = (section) => {
     if (section === 'outdoor') return 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&q=80&w=400';
     if (section === 'indoor') return 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=400';
-    // VIP/Private
     return 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=400';
   };
 
@@ -182,6 +179,20 @@ export default function BookingMap() {
       return pax < 8; 
     }
     return false;
+  };
+
+  // --- 4. Google Calendar Generator ---
+  const getGoogleCalendarUrl = () => {
+    if (!date || !time) return '#';
+    const startTime = parseISO(`${date}T${time}`);
+    const endTime = addHours(startTime, 2); // Default 2 hours
+    const fmt = (d) => format(d, "yyyyMMdd'T'HHmmss");
+    
+    const title = encodeURIComponent("Dinner at NZ Coffee");
+    const details = encodeURIComponent(`Reservation for ${formData.pax} Guests. Preference: ${selectedZone?.label}`);
+    const location = encodeURIComponent("NZ Coffee, Seremban, Malaysia");
+    
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(startTime)}/${fmt(endTime)}&details=${details}&location=${location}&sf=true&output=xml`;
   };
 
   // --- Success Screen ---
@@ -199,10 +210,18 @@ export default function BookingMap() {
       </div>
 
       <div className="space-y-4">
-        <a href="/menu" target="_blank" className="flex items-center justify-center gap-2 w-full bg-premium-gold text-black uppercase tracking-widest text-xs font-bold py-4 hover:bg-white transition-colors">
+        {/* VIEW MENU BUTTON */}
+        <a href="https://drive.google.com/file/d/1wCgWWwjt3h3As-PQ_ey3Hz9mdRJ6CtR2/view?usp=sharing" target="_blank" className="flex items-center justify-center gap-2 w-full bg-premium-gold text-black uppercase tracking-widest text-xs font-bold py-4 hover:bg-white transition-colors">
           <UtensilsCrossed size={14} /> View Digital Menu
         </a>
-        <button onClick={() => { setSuccess(false); setSelectedZone(null); setTime(''); setFormData({...formData, pax: ''}); }} className="block w-full border border-white/10 text-gray-400 uppercase tracking-widest text-xs py-4 hover:text-white hover:border-white transition-colors">
+
+        {/* ADD TO CALENDAR BUTTON (NEW) */}
+        <a href={getGoogleCalendarUrl()} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full border border-white/20 text-white uppercase tracking-widest text-xs font-bold py-4 hover:border-premium-gold hover:text-premium-gold transition-colors">
+          <CalendarCheck size={14} /> Add to Google Calendar
+        </a>
+
+        {/* RESTART BUTTON */}
+        <button onClick={() => { setSuccess(false); setSelectedZone(null); setTime(''); setFormData({...formData, pax: ''}); }} className="block w-full text-gray-500 uppercase tracking-widest text-[10px] py-4 hover:text-white transition-colors">
           Make Another Booking
         </button>
       </div>
@@ -325,7 +344,7 @@ export default function BookingMap() {
             {/* LEFT: Pax Input */}
             <div className="bg-[#0F0F0F] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-colors h-full">
               <div className="absolute top-0 left-0 w-1 h-full bg-premium-gold opacity-50"></div>
-              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. Pax Size</label>
+              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. How many pax?</label>
               <div className="relative">
                 <Users className="absolute left-0 top-3 text-gray-500 group-focus-within:text-premium-gold transition-colors" size={24} />
                 <input 
@@ -347,9 +366,9 @@ export default function BookingMap() {
               </p>
             </div>
 
-            {/* RIGHT: Zone Selection (Updated List UI) */}
+            {/* RIGHT: Zone Selection */}
             <div>
-              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">4. Select Preference</label>
+              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">4. Select Seating Preference</label>
               
               {!formData.pax ? (
                 <div className="p-8 border border-dashed border-gray-800 text-gray-600 text-center font-sans text-sm rounded-lg bg-white/[0.02]">
@@ -374,7 +393,6 @@ export default function BookingMap() {
                           }
                         `}
                       >
-                        {/* Zone Image (Left) */}
                         <div className="w-24 h-24 sm:w-32 sm:h-28 shrink-0">
                           <img 
                             src={getZoneImage(zone.section)} 
@@ -383,7 +401,6 @@ export default function BookingMap() {
                           />
                         </div>
 
-                        {/* Zone Content (Right) */}
                         <div className="flex-1 p-4 flex items-center justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -404,7 +421,6 @@ export default function BookingMap() {
                             )}
                           </div>
 
-                          {/* Selection Indicator */}
                           {!locked && (
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center
                               ${selectedZone?.id === zone.id ? 'border-premium-gold' : 'border-gray-700'}
@@ -462,7 +478,7 @@ export default function BookingMap() {
 
               <div className="group">
                 <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Notes</label>
-                <textarea placeholder="Baby chair, Bring Birthday Deco, Anniversary..." rows="2" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors resize-none placeholder:text-gray-700" 
+                <textarea placeholder="Baby chair, Bring birthday deco, Anniversary..." rows="2" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors resize-none placeholder:text-gray-700" 
                   value={formData.request} onChange={e => setFormData({...formData, request: e.target.value})}></textarea>
               </div>
             </div>

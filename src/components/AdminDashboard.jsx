@@ -1,14 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { format, isToday, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Users, Search, MessageSquare, XCircle, BarChart3 } from 'lucide-react';
+import { format, isToday, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from 'date-fns';
+import { Users, Search, MessageSquare, XCircle, BarChart3, Calendar, RotateCw, Save, Undo2, ArrowRight, Filter } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('today'); // 'today', 'week', 'month', 'all'
+  
+  // Filters
+  const [filter, setFilter] = useState('week'); // Default 'week'
+  
+  // Custom Date Range State
+  const [dateRange, setDateRange] = useState({
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd')
+  });
   
   // Note Editing
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -34,8 +42,6 @@ export default function AdminDashboard() {
   // --- 2. Load Data ---
   async function loadData() {
     setLoading(true);
-    // Fetching ALL data so we can calculate monthly totals client-side accurately
-    // In a massive app, you'd filter via SQL, but for <10,000 bookings, this is instant.
     const { data, error } = await supabase
       .from('bookings')
       .select('*, tables(label)')
@@ -60,6 +66,14 @@ export default function AdminDashboard() {
     if (error) setBookings(previous);
   };
 
+  const handleUndoCancel = async (id) => {
+    if (!window.confirm("Restore this booking?")) return;
+    const previous = [...bookings];
+    setBookings(bookings.map(b => b.id === id ? { ...b, status: 'confirmed' } : b));
+    const { error } = await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id);
+    if (error) setBookings(previous);
+  };
+
   const saveNote = async (id) => {
     const previous = [...bookings];
     setBookings(bookings.map(b => b.id === id ? { ...b, staff_notes: tempNote } : b));
@@ -68,16 +82,23 @@ export default function AdminDashboard() {
     if (error) setBookings(previous);
   };
 
-  // --- 4. Advanced Filtering ---
+  // --- 4. Filtering Logic ---
   const filteredBookings = bookings.filter(b => {
     const date = parseISO(b.booking_date);
     const now = new Date();
+
+    if (filter === 'custom') {
+      const start = parseISO(dateRange.start);
+      // Set end date to end of day to ensure inclusive
+      const end = parseISO(dateRange.end);
+      return isWithinInterval(date, { start, end });
+    }
 
     if (filter === 'today') return isToday(date);
     
     if (filter === 'week') {
       return isWithinInterval(date, {
-        start: startOfWeek(now, { weekStartsOn: 1 }), // Monday start
+        start: startOfWeek(now, { weekStartsOn: 1 }), 
         end: endOfWeek(now, { weekStartsOn: 1 })
       });
     }
@@ -92,14 +113,10 @@ export default function AdminDashboard() {
     return true; // 'all'
   });
 
-  // --- 5. "Discreet" Pax Counter (Profit Share Tracker) ---
-  // Calculates total confirmed pax for the CURRENT MONTH, regardless of the view filter.
   const currentMonthPax = bookings.reduce((sum, b) => {
     const date = parseISO(b.booking_date);
     const now = new Date();
     const isThisMonth = isWithinInterval(date, { start: startOfMonth(now), end: endOfMonth(now) });
-    
-    // Only count if it's this month AND not cancelled
     if (isThisMonth && b.status !== 'cancelled') {
       return sum + (parseInt(b.pax) || 0);
     }
@@ -107,10 +124,11 @@ export default function AdminDashboard() {
   }, 0);
 
 
-  // --- RENDER ---
+  // --- RENDER: LOGIN ---
   if (!isAuthenticated) return (
     <div className="min-h-screen bg-black flex items-center justify-center text-white p-4">
       <div className="border border-white/10 bg-[#0F0F0F] p-8 rounded-lg text-center max-w-sm w-full">
+        <img src="/logo.jpg" alt="Logo" className="h-16 w-auto mx-auto mb-6 opacity-80" />
         <h2 className="text-xl font-serif mb-6 text-premium-gold tracking-wider">Staff Portal</h2>
         <form onSubmit={handleLogin}>
           <input type="password" placeholder="PIN" value={pin} onChange={e => setPin(e.target.value)} 
@@ -125,136 +143,201 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-[#0F0F0F] text-white font-sans selection:bg-premium-gold selection:text-black">
       
       {/* Header */}
-      <div className="bg-black border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-black border-b border-white/10 sticky top-0 z-50 shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col xl:flex-row justify-between items-center gap-4">
           
-          {/* Logo & Status */}
-          <div className="flex items-center gap-6">
+          {/* Logo Section */}
+          <div className="flex items-center gap-4 w-full xl:w-auto justify-between">
              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <h1 className="text-lg font-serif tracking-wide text-white">NZ <span className="text-premium-gold">Admin</span></h1>
+                <img src="/logo.jpg" alt="NZ" className="h-10 w-auto" />
+                <div className="h-8 w-[1px] bg-white/10"></div>
+                <div className="flex flex-col">
+                   <h1 className="text-sm font-bold tracking-wide text-white uppercase">Admin</h1>
+                   <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono">
+                      <BarChart3 size={10} />
+                      <span>PAX (Mo): {currentMonthPax}</span>
+                   </div>
+                </div>
              </div>
 
-             {/* THE DISCREET COUNTER */}
-             {/* Looks like a boring system stat: "M-TD: 154" (Month-To-Date) */}
-             <div className="flex items-center gap-2 px-3 py-1 bg-[#111] border border-white/5 rounded text-[10px] text-gray-500 font-mono" title="Month-to-Date Confirmed Guests">
-                <BarChart3 size={10} />
-                <span>M-TD: <span className="text-gray-300 font-bold">{currentMonthPax}</span></span>
-             </div>
+             <button onClick={loadData} className="xl:hidden p-2 text-gray-400 hover:text-white">
+                <RotateCw size={20} />
+             </button>
           </div>
           
-          {/* Filters */}
-          <div className="flex gap-1 p-1 bg-[#1a1a1a] rounded-lg overflow-x-auto max-w-full">
-            {['today', 'week', 'month', 'all'].map(f => (
-              <button 
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-md transition-all whitespace-nowrap
-                  ${filter === f ? 'bg-premium-gold text-black font-bold' : 'text-gray-500 hover:text-white'}
-                `}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          {/* Controls */}
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
+            
+            {/* Quick Filters */}
+            <div className="flex gap-1 p-1 bg-[#1a1a1a] rounded-lg shrink-0 w-full md:w-auto overflow-x-auto border border-white/5">
+              {['today', 'week', 'month', 'all'].map(f => (
+                <button 
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 text-[10px] uppercase tracking-wider rounded transition-all whitespace-nowrap font-bold flex-1 md:flex-none
+                    ${filter === f ? 'bg-premium-gold text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+                  `}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
 
-          <button onClick={loadData} className="text-gray-500 hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-          </button>
+            {/* UPDATED: Better Date Range Picker */}
+            <div className={`flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-lg border transition-all duration-300 w-full md:w-auto
+              ${filter === 'custom' ? 'border-premium-gold' : 'border-white/10'}
+            `}>
+              {/* Start Date */}
+              <div className="relative group">
+                <span className="absolute -top-2 left-2 text-[8px] bg-[#1a1a1a] px-1 text-gray-500 font-bold uppercase tracking-wider">From</span>
+                <input 
+                  type="date" 
+                  value={dateRange.start}
+                  onChange={e => {
+                    setDateRange({...dateRange, start: e.target.value});
+                    setFilter('custom');
+                  }}
+                  className="bg-transparent text-xs font-mono text-white focus:outline-none py-2 px-2 w-32 border border-white/10 rounded group-hover:border-white/30 transition-colors [color-scheme:dark]"
+                />
+              </div>
+
+              <ArrowRight size={12} className="text-gray-600" />
+
+              {/* End Date */}
+              <div className="relative group">
+                 <span className="absolute -top-2 left-2 text-[8px] bg-[#1a1a1a] px-1 text-gray-500 font-bold uppercase tracking-wider">To</span>
+                 <input 
+                  type="date" 
+                  value={dateRange.end}
+                  min={dateRange.start}
+                  onChange={e => {
+                    setDateRange({...dateRange, end: e.target.value});
+                    setFilter('custom');
+                  }}
+                  className="bg-transparent text-xs font-mono text-white focus:outline-none py-2 px-2 w-32 border border-white/10 rounded group-hover:border-white/30 transition-colors [color-scheme:dark]"
+                />
+              </div>
+            </div>
+
+            <button onClick={loadData} className="hidden xl:block p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-full transition-all">
+              <RotateCw size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto p-4 md:p-8">
-        <div className="space-y-4">
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="space-y-6">
           
           {filteredBookings.length === 0 && !loading && (
-            <div className="text-center py-20 text-gray-600">
-              <p className="text-sm uppercase tracking-widest">No bookings found.</p>
+            <div className="text-center py-24 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
+              <p className="text-sm text-gray-500 uppercase tracking-widest font-bold">No bookings found</p>
+              <p className="text-xs text-gray-600 mt-2">Adjust your filters to see results</p>
             </div>
           )}
 
           {filteredBookings.map(b => (
             <div 
               key={b.id} 
-              className={`group relative p-5 rounded-sm border transition-all duration-300
+              className={`relative p-6 rounded-lg border transition-all duration-300 shadow-xl
                 ${b.status === 'cancelled' 
-                  ? 'bg-black border-red-900/30 opacity-40' 
-                  : 'bg-[#141414] border-white/5 hover:border-premium-gold/50'
+                  ? 'bg-black border-red-900/30 opacity-60' 
+                  : 'bg-[#141414] border-white/10 hover:border-premium-gold/40'
                 }
               `}
             >
-              <div className={`absolute top-0 left-0 w-0.5 h-full ${b.status === 'cancelled' ? 'bg-red-900' : 'bg-premium-gold'}`}></div>
+              <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-lg ${b.status === 'cancelled' ? 'bg-red-900' : 'bg-premium-gold'}`}></div>
 
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className={`font-serif text-lg text-white ${b.status === 'cancelled' && 'line-through decoration-red-900 text-gray-500'}`}>
+                  <h3 className={`font-serif text-2xl text-white mb-1 ${b.status === 'cancelled' && 'line-through decoration-red-900 text-gray-500'}`}>
                     {b.customer_name}
                   </h3>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 font-mono uppercase tracking-wide">
-                    <span className="text-premium-gold font-bold">{b.booking_time.slice(0,5)}</span>
-                    <span>•</span>
+                  <div className="flex items-center gap-3 text-xs font-bold font-mono tracking-wide text-gray-400">
+                    <span className="text-premium-gold text-sm">{b.booking_time.slice(0,5)}</span>
+                    <span className="opacity-30">|</span>
                     <span>{b.booking_date}</span>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="inline-flex items-center gap-1.5 bg-[#222] px-2 py-1 rounded text-[10px] text-white border border-white/10">
-                     <Users size={10} className="text-premium-gold"/>
+                  <div className="inline-flex items-center gap-2 bg-[#222] px-4 py-2 rounded-md text-sm text-white border border-white/10 shadow-inner">
+                     <Users size={14} className="text-premium-gold"/>
                      <span className="font-bold">{b.pax} Pax</span>
                   </div>
-                  <div className="mt-1 text-[9px] text-gray-600 uppercase tracking-widest">
+                  <div className="mt-2 text-[10px] text-gray-500 uppercase tracking-widest font-bold">
                     {b.tables?.label}
                   </div>
                 </div>
               </div>
 
-              {/* Collapsed Details - Staff can expand mentally by just reading */}
-              <div className="flex flex-col md:flex-row gap-4 text-[10px] text-gray-500 mb-3 border-b border-white/5 pb-3">
-                <div className="font-mono opacity-70">
-                  {b.customer_phone} <span className="mx-1">/</span> {b.customer_email}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 mb-6 border-b border-white/5 pb-6">
+                <div>
+                  <span className="block text-[9px] uppercase tracking-widest text-gray-600 mb-1 font-bold">Details</span>
+                  <div className="font-mono">{b.customer_phone}</div>
+                  <div className="font-mono">{b.customer_email}</div>
                 </div>
                 {b.special_request && (
-                  <div className="text-premium-gold/80 italic">
-                    "{b.special_request}"
+                  <div className="bg-white/5 p-3 rounded border border-white/5">
+                    <span className="block text-[9px] uppercase tracking-widest text-premium-gold mb-1 font-bold">Special Request</span>
+                    <span className="italic text-gray-300">"{b.special_request}"</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between items-center">
-                <div className="flex-1 mr-4">
+              {/* ACTIONS ROW */}
+              <div className="flex flex-col md:flex-row gap-4">
+                
+                {/* Note Section */}
+                <div className="flex-1">
                   {editingNoteId === b.id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
                       <input 
                         autoFocus 
                         value={tempNote} 
                         onChange={e => setTempNote(e.target.value)} 
-                        className="flex-1 bg-black border border-premium-gold rounded px-2 py-1 text-xs text-white focus:outline-none" 
-                        placeholder="Note..." 
+                        className="flex-1 bg-black border border-premium-gold rounded-md px-4 py-3 text-sm text-white focus:outline-none" 
+                        placeholder="Type note..." 
                       />
-                      <button onClick={() => saveNote(b.id)} className="text-[10px] bg-premium-gold text-black px-2 py-1 rounded font-bold uppercase">Save</button>
+                      <button onClick={() => saveNote(b.id)} className="bg-premium-gold text-black px-4 rounded-md font-bold hover:bg-white transition-colors">
+                        <Save size={18} />
+                      </button>
                     </div>
                   ) : (
                     <button 
                       onClick={() => { setEditingNoteId(b.id); setTempNote(b.staff_notes || ''); }} 
-                      className="flex items-center gap-2 text-[10px] text-gray-600 hover:text-white transition-colors group/note"
+                      className={`w-full md:w-auto flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-md text-sm font-bold border transition-all
+                        ${b.staff_notes 
+                          ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-500' 
+                          : 'bg-[#1a1a1a] border-white/10 text-gray-400 hover:text-white hover:border-white/30'
+                        }
+                      `}
                     >
-                      <MessageSquare size={10} />
-                      {b.staff_notes ? <span className="text-yellow-500/80">{b.staff_notes}</span> : <span className="opacity-0 group-hover/note:opacity-100 transition-opacity">Add Note</span>}
+                      <MessageSquare size={16} />
+                      {b.staff_notes ? b.staff_notes : "Add Staff Note"}
                     </button>
                   )}
                 </div>
 
+                {/* Status Actions */}
                 {b.status !== 'cancelled' ? (
                   <button 
                     onClick={() => handleCancel(b.id)} 
-                    className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[9px] text-red-900 border border-red-900/30 px-2 py-1 rounded hover:bg-red-900 hover:text-white uppercase tracking-widest"
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#1a0505] border border-red-900/30 rounded-md text-red-500 text-sm font-bold hover:bg-red-900 hover:text-white transition-all uppercase tracking-widest"
                   >
-                    Cancel
+                    <XCircle size={16} /> Cancel Booking
                   </button>
                 ) : (
-                   <span className="text-[9px] uppercase tracking-widest text-red-900 font-bold border border-red-900/20 px-2 py-1 rounded">Void</span>
+                  <button 
+                    onClick={() => handleUndoCancel(b.id)} 
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-900/10 border border-blue-800/30 rounded-md text-blue-400 text-sm font-bold hover:bg-blue-900 hover:text-white transition-all uppercase tracking-widest"
+                  >
+                    <Undo2 size={16} /> Restore Booking
+                  </button>
                 )}
               </div>
+
             </div>
           ))}
         </div>
