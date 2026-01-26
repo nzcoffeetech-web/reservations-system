@@ -1,46 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { format, isToday, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from 'date-fns';
-import { Users, Search, MessageSquare, XCircle, BarChart3, Calendar, RotateCw, Save, Undo2, ArrowRight, Filter } from 'lucide-react';
+import { format, isToday, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Users, Search, MessageSquare, XCircle, BarChart3, Calendar, RotateCw, Save, Undo2, ArrowRight, Lock } from 'lucide-react';
 
 export default function AdminDashboard() {
+  // --- AUTH STATE (PIN BASED) ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  // --- DATA STATE ---
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState('week'); 
   
-  // Filters
-  const [filter, setFilter] = useState('week'); // Default 'week'
-  
-  // Custom Date Range State
   const [dateRange, setDateRange] = useState({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(new Date(), 'yyyy-MM-dd')
   });
   
-  // Note Editing
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [tempNote, setTempNote] = useState('');
 
-  // --- 1. Login ---
+  // --- 1. LOGIN HANDLER (PIN) ---
   const handleLogin = (e) => {
     e.preventDefault();
-    if (pin === '8888') {
+    // Compare against Environment Variable (or fallback to 8888)
+    const CORRECT_PIN = import.meta.env.PUBLIC_ADMIN_PIN || '8888';
+    
+    if (pin === CORRECT_PIN) {
       setIsAuthenticated(true);
-      localStorage.setItem('nz_admin_auth', 'true');
+      setErrorMsg('');
+      setPin(''); // Clear pin from memory for security
     } else {
-      alert('Access Denied');
+      setErrorMsg('Incorrect PIN');
+      setPin('');
     }
   };
 
-  useEffect(() => {
-    if (localStorage.getItem('nz_admin_auth') === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setBookings([]); 
+  };
 
-  // --- 2. Load Data ---
+  // --- 2. DATA LOADING (Only if Authenticated) ---
   async function loadData() {
+    if (!isAuthenticated) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('bookings')
@@ -48,16 +54,17 @@ export default function AdminDashboard() {
       .order('booking_date', { ascending: true })
       .order('booking_time', { ascending: true });
     
-    if (error) alert('Error loading data');
+    if (error) alert('Error loading data. Check internet connection.');
     else setBookings(data || []);
     setLoading(false);
   }
 
+  // Auto-load once authenticated
   useEffect(() => {
     if (isAuthenticated) loadData();
   }, [isAuthenticated]);
 
-  // --- 3. Actions ---
+  // --- 3. ACTIONS ---
   const handleCancel = async (id) => {
     if (!window.confirm("Confirm cancellation?")) return;
     const previous = [...bookings];
@@ -82,35 +89,30 @@ export default function AdminDashboard() {
     if (error) setBookings(previous);
   };
 
-  // --- 4. Filtering Logic ---
+  // --- 4. FILTERING LOGIC ---
   const filteredBookings = bookings.filter(b => {
     const date = parseISO(b.booking_date);
     const now = new Date();
 
     if (filter === 'custom') {
       const start = parseISO(dateRange.start);
-      // Set end date to end of day to ensure inclusive
       const end = parseISO(dateRange.end);
       return isWithinInterval(date, { start, end });
     }
-
     if (filter === 'today') return isToday(date);
-    
     if (filter === 'week') {
       return isWithinInterval(date, {
         start: startOfWeek(now, { weekStartsOn: 1 }), 
         end: endOfWeek(now, { weekStartsOn: 1 })
       });
     }
-
     if (filter === 'month') {
       return isWithinInterval(date, {
         start: startOfMonth(now),
         end: endOfMonth(now)
       });
     }
-
-    return true; // 'all'
+    return true; 
   });
 
   const currentMonthPax = bookings.reduce((sum, b) => {
@@ -124,21 +126,34 @@ export default function AdminDashboard() {
   }, 0);
 
 
-  // --- RENDER: LOGIN ---
+  // --- RENDER: LOGIN SCREEN ---
   if (!isAuthenticated) return (
     <div className="min-h-screen bg-black flex items-center justify-center text-white p-4">
-      <div className="border border-white/10 bg-[#0F0F0F] p-8 rounded-lg text-center max-w-sm w-full">
+      <div className="border border-white/10 bg-[#0F0F0F] p-8 rounded-lg text-center max-w-sm w-full shadow-2xl animate-in zoom-in duration-300">
         <img src="/logo.jpg" alt="Logo" className="h-16 w-auto mx-auto mb-6 opacity-80" />
-        <h2 className="text-xl font-serif mb-6 text-premium-gold tracking-wider">Staff Portal</h2>
+        <h2 className="text-xl font-serif mb-2 text-premium-gold tracking-wider">Staff Portal</h2>
+        <p className="text-xs text-gray-600 mb-6 uppercase tracking-widest">Authorized Personnel Only</p>
+        
         <form onSubmit={handleLogin}>
-          <input type="password" placeholder="PIN" value={pin} onChange={e => setPin(e.target.value)} 
-            className="w-full bg-black border border-white/20 p-4 text-center text-white text-xl tracking-[0.5em] rounded mb-4 focus:border-premium-gold focus:outline-none" autoFocus />
-          <button className="w-full py-4 bg-premium-gold text-black font-bold uppercase tracking-widest text-sm rounded hover:bg-white transition-colors">Enter</button>
+          <input 
+            type="password" 
+            placeholder="ENTER PIN" 
+            value={pin} 
+            onChange={e => setPin(e.target.value)} 
+            className="w-full bg-black border border-white/20 p-4 text-center text-white text-xl tracking-[0.5em] rounded mb-2 focus:border-premium-gold focus:outline-none focus:ring-1 focus:ring-premium-gold transition-all placeholder:text-gray-800 placeholder:tracking-normal" 
+            autoFocus 
+          />
+          {errorMsg && <p className="text-red-500 text-xs font-bold mb-4 animate-pulse">{errorMsg}</p>}
+          
+          <button className="w-full py-4 bg-premium-gold text-black font-bold uppercase tracking-widest text-xs rounded hover:bg-white transition-colors mt-2">
+            Unlock Dashboard
+          </button>
         </form>
       </div>
     </div>
   );
 
+  // --- RENDER: DASHBOARD ---
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-white font-sans selection:bg-premium-gold selection:text-black">
       
@@ -146,7 +161,7 @@ export default function AdminDashboard() {
       <div className="bg-black border-b border-white/10 sticky top-0 z-50 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col xl:flex-row justify-between items-center gap-4">
           
-          {/* Logo Section */}
+          {/* Logo & Lock Section */}
           <div className="flex items-center gap-4 w-full xl:w-auto justify-between">
              <div className="flex items-center gap-3">
                 <img src="/logo.jpg" alt="NZ" className="h-10 w-auto" />
@@ -160,15 +175,16 @@ export default function AdminDashboard() {
                 </div>
              </div>
 
-             <button onClick={loadData} className="xl:hidden p-2 text-gray-400 hover:text-white">
-                <RotateCw size={20} />
+             {/* MANUAL LOCK BUTTON */}
+             <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 bg-red-900/10 border border-red-900/30 rounded text-[10px] text-red-500 font-bold uppercase tracking-widest hover:bg-red-900 hover:text-white transition-all">
+                <Lock size={12} /> Lock
              </button>
           </div>
           
           {/* Controls */}
           <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
             
-            {/* Quick Filters */}
+            {/* Filter Buttons */}
             <div className="flex gap-1 p-1 bg-[#1a1a1a] rounded-lg shrink-0 w-full md:w-auto overflow-x-auto border border-white/5">
               {['today', 'week', 'month', 'all'].map(f => (
                 <button 
@@ -183,11 +199,10 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            {/* UPDATED: Better Date Range Picker */}
+            {/* Date Picker */}
             <div className={`flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-lg border transition-all duration-300 w-full md:w-auto
               ${filter === 'custom' ? 'border-premium-gold' : 'border-white/10'}
             `}>
-              {/* Start Date */}
               <div className="relative group">
                 <span className="absolute -top-2 left-2 text-[8px] bg-[#1a1a1a] px-1 text-gray-500 font-bold uppercase tracking-wider">From</span>
                 <input 
@@ -203,7 +218,6 @@ export default function AdminDashboard() {
 
               <ArrowRight size={12} className="text-gray-600" />
 
-              {/* End Date */}
               <div className="relative group">
                  <span className="absolute -top-2 left-2 text-[8px] bg-[#1a1a1a] px-1 text-gray-500 font-bold uppercase tracking-wider">To</span>
                  <input 
@@ -286,10 +300,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* ACTIONS ROW */}
               <div className="flex flex-col md:flex-row gap-4">
-                
-                {/* Note Section */}
                 <div className="flex-1">
                   {editingNoteId === b.id ? (
                     <div className="flex gap-2">
@@ -320,24 +331,16 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                {/* Status Actions */}
                 {b.status !== 'cancelled' ? (
-                  <button 
-                    onClick={() => handleCancel(b.id)} 
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#1a0505] border border-red-900/30 rounded-md text-red-500 text-sm font-bold hover:bg-red-900 hover:text-white transition-all uppercase tracking-widest"
-                  >
+                  <button onClick={() => handleCancel(b.id)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#1a0505] border border-red-900/30 rounded-md text-red-500 text-sm font-bold hover:bg-red-900 hover:text-white transition-all uppercase tracking-widest">
                     <XCircle size={16} /> Cancel Booking
                   </button>
                 ) : (
-                  <button 
-                    onClick={() => handleUndoCancel(b.id)} 
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-900/10 border border-blue-800/30 rounded-md text-blue-400 text-sm font-bold hover:bg-blue-900 hover:text-white transition-all uppercase tracking-widest"
-                  >
+                  <button onClick={() => handleUndoCancel(b.id)} className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-900/10 border border-blue-800/30 rounded-md text-blue-400 text-sm font-bold hover:bg-blue-900 hover:text-white transition-all uppercase tracking-widest">
                     <Undo2 size={16} /> Restore Booking
                   </button>
                 )}
               </div>
-
             </div>
           ))}
         </div>

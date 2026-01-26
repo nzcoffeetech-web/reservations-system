@@ -1,7 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { format, addHours, isBefore, parseISO, getDay, addDays } from 'date-fns';
-import { Users, Sun, Armchair, Star, Clock, UtensilsCrossed, CheckCircle, CalendarX, Lock, Calendar, Info, CalendarCheck } from 'lucide-react';
+import { Users, Sun, Armchair, Star, UtensilsCrossed, CheckCircle, CalendarX, Lock, Calendar, Info, RotateCcw } from 'lucide-react';
+
+// --- CUSTOM BRAND ICONS ---
+
+const GoogleLogo = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  </svg>
+);
+
+const AppleLogo = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.45-1.03 3.49-1.03 1.38 0 2.68.75 3.5 1.83-3.15 1.88-2.58 6.25.48 7.57-.27.85-.69 1.77-1.28 2.58-.62.82-1.25 1.28-1.27 1.28zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+  </svg>
+);
 
 export default function BookingMap() {
   // --- State ---
@@ -37,8 +54,9 @@ export default function BookingMap() {
   }, [time]);
 
   // --- Helper: Generate Next 7 Days ---
+  const today = new Date();
   const next7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = addDays(new Date(), i);
+    const d = addDays(today, i);
     return {
       value: format(d, 'yyyy-MM-dd'),
       dayName: format(d, 'EEE'), 
@@ -46,6 +64,8 @@ export default function BookingMap() {
       fullLabel: format(d, 'd MMM')
     };
   });
+
+  const isDateVisible = next7Days.some(d => d.value === date);
 
   // --- 1. Smart Time Logic ---
   const generateTimeSlots = () => {
@@ -181,11 +201,11 @@ export default function BookingMap() {
     return false;
   };
 
-  // --- 4. Google Calendar Generator ---
+  // --- 4. Calendar Helpers ---
   const getGoogleCalendarUrl = () => {
     if (!date || !time) return '#';
     const startTime = parseISO(`${date}T${time}`);
-    const endTime = addHours(startTime, 2); // Default 2 hours
+    const endTime = addHours(startTime, 2); 
     const fmt = (d) => format(d, "yyyyMMdd'T'HHmmss");
     
     const title = encodeURIComponent("Dinner at NZ Coffee");
@@ -193,6 +213,33 @@ export default function BookingMap() {
     const location = encodeURIComponent("NZ Coffee, Seremban, Malaysia");
     
     return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(startTime)}/${fmt(endTime)}&details=${details}&location=${location}&sf=true&output=xml`;
+  };
+
+  const downloadIcs = () => {
+    if (!date || !time) return;
+    const startTime = parseISO(`${date}T${time}`);
+    const endTime = addHours(startTime, 2);
+    const fmt = (d) => format(d, "yyyyMMdd'T'HHmmss");
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Dinner at NZ Coffee
+DTSTART:${fmt(startTime)}
+DTEND:${fmt(endTime)}
+LOCATION:NZ Coffee, Seremban, Malaysia
+DESCRIPTION:Reservation for ${formData.pax} Guests. Table: ${selectedZone?.label}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'nz_coffee_booking.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // --- Success Screen ---
@@ -210,17 +257,26 @@ export default function BookingMap() {
       </div>
 
       <div className="space-y-4">
-        {/* VIEW MENU BUTTON */}
         <a href="https://drive.google.com/file/d/1wCgWWwjt3h3As-PQ_ey3Hz9mdRJ6CtR2/view?usp=sharing" target="_blank" className="flex items-center justify-center gap-2 w-full bg-premium-gold text-black uppercase tracking-widest text-xs font-bold py-4 hover:bg-white transition-colors">
           <UtensilsCrossed size={14} /> View Digital Menu
         </a>
 
-        {/* ADD TO CALENDAR BUTTON (NEW) */}
-        <a href={getGoogleCalendarUrl()} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full border border-white/20 text-white uppercase tracking-widest text-xs font-bold py-4 hover:border-premium-gold hover:text-premium-gold transition-colors">
-          <CalendarCheck size={14} /> Add to Google Calendar
-        </a>
+        {/* CALENDAR BUTTONS - UPDATED */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          
+          {/* Google Calendar */}
+          <a href={getGoogleCalendarUrl()} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 border border-white/20 text-white uppercase tracking-widest text-[10px] font-bold py-4 hover:border-premium-gold hover:text-premium-gold transition-colors bg-white/5 hover:bg-white/10">
+            <GoogleLogo className="w-4 h-4" /> 
+            Add to Google Calendar
+          </a>
+          
+          {/* Apple Calendar */}
+          <button onClick={downloadIcs} className="flex-1 flex items-center justify-center gap-2 border border-white/20 text-white uppercase tracking-widest text-[10px] font-bold py-4 hover:border-premium-gold hover:text-premium-gold transition-colors bg-white/5 hover:bg-white/10">
+            <AppleLogo className="w-4 h-4 pb-0.5" /> 
+            Add to Apple Calendar
+          </button>
+        </div>
 
-        {/* RESTART BUTTON */}
         <button onClick={() => { setSuccess(false); setSelectedZone(null); setTime(''); setFormData({...formData, pax: ''}); }} className="block w-full text-gray-500 uppercase tracking-widest text-[10px] py-4 hover:text-white transition-colors">
           Make Another Booking
         </button>
@@ -250,7 +306,7 @@ export default function BookingMap() {
         {/* 1A. Date Selection */}
         <div>
            <div className="flex justify-between items-end mb-4 px-2">
-              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest block">1. Select Date</label>
+              <label className="text-sm font-bold text-premium-gold uppercase tracking-widest block">1. Select Date</label>
               
               <button onClick={() => dateInputRef.current?.showPicker()} className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-gray-500 hover:text-white transition-colors">
                 <Calendar size={12} /> More Dates
@@ -269,34 +325,54 @@ export default function BookingMap() {
               />
            </div>
 
-           <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-              {next7Days.map((day) => {
-                const isSelected = date === day.value;
-                return (
-                  <button
-                    key={day.value}
-                    onClick={() => {
-                      setDate(day.value);
-                      setTime('');
-                      setSelectedZone(null);
-                    }}
-                    className={`flex flex-col items-center justify-center py-4 rounded-sm border transition-all duration-300
-                      ${isSelected 
-                        ? 'bg-premium-gold border-premium-gold text-black shadow-[0_0_15px_rgba(192,141,93,0.3)] scale-105' 
-                        : 'bg-white/5 border-transparent text-gray-400 hover:border-gray-600 hover:text-white hover:bg-white/10'}
-                    `}
-                  >
-                    <span className={`text-[10px] uppercase tracking-widest mb-1 ${isSelected ? 'font-bold' : 'font-medium'}`}>{day.dayName}</span>
-                    <span className={`text-2xl font-serif leading-none ${isSelected ? 'font-bold' : 'font-normal'}`}>{day.dayNumber}</span>
-                  </button>
-                )
-              })}
-           </div>
+           {isDateVisible ? (
+             <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                {next7Days.map((day) => {
+                  const isSelected = date === day.value;
+                  return (
+                    <button
+                      key={day.value}
+                      onClick={() => {
+                        setDate(day.value);
+                        setTime('');
+                        setSelectedZone(null);
+                      }}
+                      className={`flex flex-col items-center justify-center py-4 rounded-sm border transition-all duration-300
+                        ${isSelected 
+                          ? 'bg-premium-gold border-premium-gold text-black shadow-[0_0_15px_rgba(192,141,93,0.3)] scale-105' 
+                          : 'bg-white/5 border-transparent text-gray-400 hover:border-gray-600 hover:text-white hover:bg-white/10'}
+                      `}
+                    >
+                      <span className={`text-[10px] uppercase tracking-widest mb-1 ${isSelected ? 'font-bold' : 'font-medium'}`}>{day.dayName}</span>
+                      <span className={`text-2xl font-serif leading-none ${isSelected ? 'font-bold' : 'font-normal'}`}>{day.dayNumber}</span>
+                    </button>
+                  )
+                })}
+             </div>
+           ) : (
+             <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="flex-1 bg-premium-gold text-black p-6 rounded-sm flex items-center justify-between shadow-[0_0_20px_rgba(192,141,93,0.3)]">
+                   <div>
+                      <span className="text-xs uppercase tracking-widest font-bold block mb-1">Selected Future Date</span>
+                      <span className="text-3xl font-serif font-bold">{format(parseISO(date), 'EEEE, d MMMM yyyy')}</span>
+                   </div>
+                   <CheckCircle size={32} />
+                </div>
+                
+                <button 
+                  onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))}
+                  className="px-6 py-6 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm flex flex-col items-center justify-center gap-1 transition-all"
+                >
+                   <RotateCcw size={16} />
+                   <span className="text-[10px] uppercase tracking-widest">Back to Today</span>
+                </button>
+             </div>
+           )}
         </div>
 
         {/* 1B. Time Selection */}
         <div className="animate-in fade-in duration-500">
-          <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block px-2">2. Select Time</label>
+          <label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block px-2">2. Select Time</label>
           
           {isClosed ? (
             <div className="flex flex-col items-center justify-center py-8 border border-dashed border-white/10 bg-white/[0.02] rounded-lg">
@@ -344,7 +420,7 @@ export default function BookingMap() {
             {/* LEFT: Pax Input */}
             <div className="bg-[#0F0F0F] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-colors h-full">
               <div className="absolute top-0 left-0 w-1 h-full bg-premium-gold opacity-50"></div>
-              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. How many pax?</label>
+              <label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. How many pax?</label>
               <div className="relative">
                 <Users className="absolute left-0 top-3 text-gray-500 group-focus-within:text-premium-gold transition-colors" size={24} />
                 <input 
@@ -352,8 +428,8 @@ export default function BookingMap() {
                   min={1}
                   max={50}
                   required
-                  placeholder="Guests" 
-                  className="w-full bg-transparent border-b border-gray-800 pl-10 py-3 text-white font-sans text-3xl font-bold focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-800"
+                  placeholder="Pax"
+                  className="w-full bg-transparent border-b border-gray-800 pl-10 py-3 text-white font-sans text-3xl font-bold focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600"
                   value={formData.pax}
                   onChange={(e) => {
                     setFormData({ ...formData, pax: e.target.value });
@@ -361,14 +437,14 @@ export default function BookingMap() {
                   }}
                 />
               </div>
-              <p className="text-[10px] text-gray-600 mt-4 font-sans flex items-center gap-2">
-                 <Lock size={10} /> Private Room requires 8+ guests.
+              <p className="text-xs text-gray-500 mt-4 font-sans flex items-center gap-2">
+                 <Lock size={12} /> Private Room requires 8+ guests.
               </p>
             </div>
 
             {/* RIGHT: Zone Selection */}
             <div>
-              <label className="text-[10px] font-bold text-premium-gold uppercase tracking-widest mb-4 block">4. Select Seating Preference</label>
+              <label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block">4. Select Seating Preference</label>
               
               {!formData.pax ? (
                 <div className="p-8 border border-dashed border-gray-800 text-gray-600 text-center font-sans text-sm rounded-lg bg-white/[0.02]">
@@ -460,25 +536,25 @@ export default function BookingMap() {
               <div className="grid grid-cols-2 gap-6">
                 <div className="group">
                   <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Name</label>
-                  <input required placeholder="Your Name" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors" 
+                  <input required placeholder="Your Name" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600" 
                     value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div className="group">
                   <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">WhatsApp</label>
-                  <input required placeholder="012-xxx" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors" 
+                  <input required placeholder="012-xxx" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600" 
                     value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                 </div>
               </div>
 
               <div className="group">
                 <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Email</label>
-                <input required type="email" placeholder="you@email.com" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors" 
+                <input required type="email" placeholder="you@email.com" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600" 
                   value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
               </div>
 
               <div className="group">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Notes</label>
-                <textarea placeholder="Baby chair, Bring birthday deco, Anniversary..." rows="2" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors resize-none placeholder:text-gray-700" 
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Any Request?</label>
+                <textarea placeholder="Baby chair, Bring birthday deco, Anniversary..." rows="2" className="w-full bg-transparent border-b border-gray-800 py-2 text-white font-sans focus:border-premium-gold focus:outline-none transition-colors resize-none placeholder:text-gray-600" 
                   value={formData.request} onChange={e => setFormData({...formData, request: e.target.value})}></textarea>
               </div>
             </div>
