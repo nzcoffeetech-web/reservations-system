@@ -5,15 +5,12 @@ export const prerender = true;
 // 2. EXPANDED DATASET
 export async function getStaticPaths() {
   const neighborhoods = [
-    // Immediate Neighbors
     { slug: "country-homes", name: "Bandar Country Homes" },
     { slug: "anggun-city", name: "Anggun City" },
     { slug: "emerald-rawang", name: "Emerald Rawang" },
     { slug: "kampung-tanjung", name: "Kampung Tanjung" },
     { slug: "rawang-town", name: "Pusat Bandar Rawang" },
     { slug: "bukit-beruntung", name: "Bukit Beruntung" },
-    
-    // Expanded Radius (Food Hunters)
     { slug: "serendah", name: "Serendah" },      
     { slug: "sungai-buaya", name: "Sungai Buaya" }, 
     { slug: "kuang", name: "Kuang" },            
@@ -76,36 +73,21 @@ export async function getStaticPaths() {
   );
 }
 
-// 3. STATIC MENU ITEMS
 const otherMainCourses = [
-  {
-    name: "Grilled Lamb",
-    desc: "Juicy tender lamb with mashed potato, onion rings and grilled pakchoy.",
-    price: "RM 33.50"
-  },
-  {
-    name: "Seafood Pasta",
-    desc: "Shrimp, scallops, and mussels in a rich garlic sauce with fresh herbs.",
-    price: "RM 24.50"
-  },
-  {
-    name: "Smoked Duck Masak Lemak",
-    desc: "Spicy traditional dish with bird's eye chili cream sauce. Served with rice.",
-    price: "RM 31.50"
-  }
+  { name: "Grilled Lamb", desc: "Juicy tender lamb with mashed potato, onion rings and grilled pakchoy.", price: "RM 33.50" },
+  { name: "Seafood Pasta", desc: "Shrimp, scallops, and mussels in a rich garlic sauce with fresh herbs.", price: "RM 24.50" },
+  { name: "Smoked Duck Masak Lemak", desc: "Spicy traditional dish with bird's eye chili cream sauce. Served with rice.", price: "RM 31.50" }
 ];
 
-// 4. GET PROPS
 const { area, intent } = Astro.props;
 
-if (!intent) {
-  throw new Error("Intent data missing");
-}
+if (!intent) { throw new Error("Intent data missing"); }
 
 const fullMenu = [intent.menuHighlight, ...otherMainCourses];
 
 import BookingMap from '../../../components/BookingMap.jsx';
 import Layout from '../../../layouts/Layout.astro';
+import Footer from '../../../components/Footer.astro'; // <--- IMPORT FOOTER HERE
 ---
 
 <Layout title={`${intent.title} for ${area.name} Residents | NZ Coffee`}>
@@ -194,13 +176,10 @@ import Layout from '../../../layouts/Layout.astro';
             {fullMenu.map((item, index) => (
               <div key={index} class="snap-center shrink-0 w-[240px] md:w-[260px] bg-[#141414] border border-white/10 rounded-xl p-6 relative group hover:border-premium-gold/50 transition-colors flex flex-col justify-between h-[220px]">
                 
-                {/* Decoration */}
                 <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                   <img src="/logo.jpg" class="w-12 grayscale" />
                 </div>
                 
-                {/* REMOVED "TOP PICK" Badge logic here */}
-
                 <div>
                   <h3 class="text-xl font-serif text-white mb-3 leading-tight group-hover:text-premium-gold transition-colors">{item.name}</h3>
                   <p class="text-gray-500 text-xs leading-relaxed line-clamp-3">{item.desc}</p>
@@ -227,11 +206,10 @@ import Layout from '../../../layouts/Layout.astro';
           <h2 class="text-3xl md:text-4xl font-serif text-white mb-3">Reserve Your Table</h2>
           <p class="text-gray-500 text-sm tracking-widest uppercase">Instant Confirmation • No Phone Call Needed</p>
         </div>
-        
         <BookingMap client:visible />
-        
       </div>
     </div>
 
   </main>
-</Layout>
+
+  <Footer /> </Layout>

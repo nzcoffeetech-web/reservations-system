@@ -1,0 +1,50 @@
+---
+import { neighborhoods } from '../data/rawang-pseo';
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="bg-black border-t border-white/10 pt-16 pb-8 px-6">
+  <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-16 text-sm">
+    
+    <div class="col-span-1 md:col-span-2">
+      <img src="/logo.jpg" alt="NZ Coffee" class="h-12 w-auto mb-6 opacity-80" />
+      <p class="text-gray-500 leading-relaxed mb-6 max-w-xs">
+        The premium destination for coffee, western cuisine, and private events in Rawang.
+      </p>
+      <div class="text-gray-400 font-mono text-xs">
+        <p>668a, Jalan Tanjung 3,</p>
+        <p>Kampung Tanjung, 48000</p>
+        <p>Rawang, Selangor</p>
+      </div>
+    </div>
+
+    <div>
+      <h4 class="text-premium-gold font-bold uppercase tracking-widest text-xs mb-6">Serving Areas</h4>
+      <ul class="space-y-3 text-gray-500">
+        {neighborhoods.slice(0, 6).map(area => (
+          <li>
+            <a href={`/rawang/${area.slug}/family-dinner`} class="hover:text-white transition-colors">
+              {area.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div>
+      <h4 class="text-premium-gold font-bold uppercase tracking-widest text-xs mb-6">Occasions</h4>
+      <ul class="space-y-3 text-gray-500">
+        <li><a href="/rawang/kampung-tanjung/birthday-venue" class="hover:text-white transition-colors">Birthday Parties</a></li>
+        <li><a href="/rawang/kampung-tanjung/private-meeting" class="hover:text-white transition-colors">Corporate Meetings</a></li>
+        <li><a href="/rawang/kampung-tanjung/family-dinner" class="hover:text-white transition-colors">Family Reunions</a></li>
+        <li><a href="/rawang/kampung-tanjung/romantic-dinner" class="hover:text-white transition-colors">Romantic Dinner</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="max-w-7xl mx-auto border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] text-gray-600 uppercase tracking-widest">
+    <p>&copy; {currentYear} NZ Coffee. All rights reserved.</p>
+    <p>Built for the community</p>
+  </div>
+</footer>
