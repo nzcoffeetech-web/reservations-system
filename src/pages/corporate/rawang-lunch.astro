@@ -1,0 +1,80 @@
+---
+import BookingMap from '../../components/BookingMap.jsx';
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Corporate Lunch in Rawang | Ready on Arrival | NZ Coffee">
+  
+  <head slot="head">
+    <meta name="description" content="Pre-book your team lunch in Rawang. Food ready upon arrival. Perfect for corporate meetings and 1-hour lunch breaks." />
+  </head>
+
+  <main class="bg-[#0F0F0F] min-h-screen text-white">
+    
+    <div class="relative bg-[#0a0a0a] border-b border-white/10">
+      <div class="max-w-6xl mx-auto px-6 py-24 grid md:grid-cols-2 gap-12 items-center">
+        
+        <div class="order-2 md:order-1">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-900/20 border border-blue-500/30 rounded-full text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-6">
+            For Rawang Businesses
+          </div>
+          <h1 class="text-5xl md:text-6xl font-serif text-white mb-6 leading-[1.1]">
+            Stop Wasting Your <br/> <span class="text-premium-gold italic">Lunch Hour.</span>
+          </h1>
+          <p class="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">
+            The only premium cafe in Rawang offering <strong>"Ready-on-Arrival"</strong> bookings for corporate teams. Walk in, eat, get back to business.
+          </p>
+          <button onclick="document.getElementById('corporate-book').scrollIntoView({behavior: 'smooth'})" class="bg-white text-black px-8 py-4 font-bold uppercase tracking-widest text-xs hover:bg-premium-gold transition-colors">
+            Book Team Lunch
+          </button>
+        </div>
+
+        <div class="order-1 md:order-2 relative">
+          <div class="absolute inset-0 bg-gradient-to-tr from-[#0a0a0a] via-transparent to-transparent z-10"></div>
+          <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop" alt="Corporate Lunch" class="w-full h-auto rounded-lg grayscale opacity-80" />
+        </div>
+
+      </div>
+    </div>
+
+    <div class="border-b border-white/5 bg-[#111]">
+      <div class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-white/10">
+        
+        <div class="px-4">
+          <h3 class="text-xl font-serif text-white mb-2">Pre-Order Available</h3>
+          <p class="text-xs text-gray-500 uppercase tracking-widest">Send us your menu choices via WhatsApp after booking.</p>
+        </div>
+
+        <div class="px-4 pt-8 md:pt-0">
+          <h3 class="text-xl font-serif text-white mb-2">High-Speed WiFi</h3>
+          <p class="text-xs text-gray-500 uppercase tracking-widest">300Mbps connection for working lunches.</p>
+        </div>
+
+        <div class="px-4 pt-8 md:pt-0">
+          <h3 class="text-xl font-serif text-white mb-2">Tax Invoice</h3>
+          <p class="text-xs text-gray-500 uppercase tracking-widest">Proper documentation for company claims.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="corporate-book" class="py-24 px-4 bg-[#0F0F0F]">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-center gap-4 mb-10">
+          <div class="h-[1px] w-12 bg-gray-800"></div>
+          <h2 class="text-2xl font-serif text-white">Secure Your Slot</h2>
+          <div class="h-[1px] w-12 bg-gray-800"></div>
+        </div>
+        
+        <BookingMap client:visible />
+        
+        <div class="mt-8 text-center">
+          <p class="text-xs text-gray-500">
+            Need a custom package for 20+ pax? <a href="https://wa.me/60123456789" class="text-premium-gold underline">WhatsApp Us Directly.</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</Layout>
