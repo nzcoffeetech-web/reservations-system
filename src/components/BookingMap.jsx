@@ -29,7 +29,6 @@ export default function BookingMap() {
   // Custom Modal State
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   
-  const dateInputRef = useRef(null);
   const detailsSectionRef = useRef(null); 
 
   const [formData, setFormData] = useState({ 
@@ -68,14 +67,13 @@ export default function BookingMap() {
   });
 
   // --- Helper: Generate Next 6 Months (For The Custom Modal) ---
-  // We generate 180 days to cover multiple months
   const calendarDays = Array.from({ length: 180 }, (_, i) => {
     const d = addDays(today, i);
     return {
       value: format(d, 'yyyy-MM-dd'),
-      dayName: format(d, 'EEEE'), // Monday
-      dateLabel: format(d, 'd MMMM'), // 12 January
-      monthHeader: format(d, 'MMMM yyyy'), // January 2026
+      dayName: format(d, 'EEEE'), 
+      dateLabel: format(d, 'd MMMM'), 
+      monthHeader: format(d, 'MMMM yyyy'), 
       isWeekend: getDay(d) === 0 || getDay(d) === 6,
       isClosed: getDay(d) === 1 // Monday
     };
@@ -215,12 +213,6 @@ export default function BookingMap() {
     if (section === 'indoor') return <Armchair size={24} />;
     if (section === 'outdoor') return <Sun size={24} />;
     return <Star size={24} />;
-  };
-
-  const getZoneImage = (section) => {
-    if (section === 'outdoor') return 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&q=80&w=400';
-    if (section === 'indoor') return 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=400';
-    return 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=400';
   };
 
   const isZoneLocked = (section) => {
@@ -380,21 +372,96 @@ export default function BookingMap() {
       {/* --- STEP 2: DETAILS --- */}
       {time && !isClosed && (
         <div ref={detailsSectionRef} className="scroll-mt-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="mb-12 text-center pt-8"><h3 className="text-2xl font-serif text-white mb-2">Final Details</h3><p className="text-gray-500 text-sm font-sans">Tell us about your party to see available areas.</p></div>
+          <div className="mb-12 text-center pt-8">
+            <h3 className="text-2xl font-serif text-white mb-2">Final Details</h3>
+            <p className="text-gray-500 text-sm font-sans">Tell us about your party to see available areas.</p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-            <div className="bg-[#0F0F0F] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-colors h-full"><div className="absolute top-0 left-0 w-1 h-full bg-premium-gold opacity-50"></div><label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. How many pax?</label><div className="relative"><Users className="absolute left-0 top-3 text-gray-500 group-focus-within:text-premium-gold transition-colors" size={24} /><input type="number" min={1} max={50} required placeholder="Pax" className="w-full bg-transparent border-b border-gray-800 pl-10 py-3 text-white font-sans text-3xl font-bold focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600" value={formData.pax} onChange={(e) => { setFormData({ ...formData, pax: e.target.value }); setSelectedZone(null); }} /></div><p className="text-xs text-gray-500 mt-4 font-sans flex items-center gap-2"><Lock size={12} /> Private Room requires 8+ guests.</p></div>
+            
+            {/* Pax Input */}
+            <div className="bg-[#0F0F0F] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-colors h-full">
+              <div className="absolute top-0 left-0 w-1 h-full bg-premium-gold opacity-50"></div>
+              <label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block">3. How many pax?</label>
+              <div className="relative">
+                <Users className="absolute left-0 top-3 text-gray-500 group-focus-within:text-premium-gold transition-colors" size={24} />
+                <input 
+                  type="number" 
+                  min={1} 
+                  max={50} 
+                  required 
+                  placeholder="Pax" 
+                  className="w-full bg-transparent border-b border-gray-800 pl-10 py-3 text-white font-sans text-3xl font-bold focus:border-premium-gold focus:outline-none transition-colors placeholder:text-gray-600" 
+                  value={formData.pax} 
+                  onChange={(e) => { 
+                    setFormData({ ...formData, pax: e.target.value }); 
+                    setSelectedZone(null); 
+                  }} 
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-4 font-sans flex items-center gap-2">
+                <Lock size={12} /> Private Room requires 8+ guests.
+              </p>
+            </div>
+
+            {/* Seating Selection (No Images) */}
             <div>
               <label className="text-sm font-bold text-premium-gold uppercase tracking-widest mb-4 block">4. Select Seating Preference</label>
-              {!formData.pax ? (<div className="p-8 border border-dashed border-gray-800 text-gray-600 text-center font-sans text-sm rounded-lg bg-white/[0.02]">Please enter number of guests first.</div>) : (
+              {!formData.pax ? (
+                <div className="p-8 border border-dashed border-gray-800 text-gray-600 text-center font-sans text-sm rounded-lg bg-white/[0.02]">
+                  Please enter number of guests first.
+                </div>
+              ) : (
                 <div className="space-y-3">
                   {zones.map((zone) => {
-                    const locked = isZoneLocked(zone.section);
+                    const paxNumber = parseInt(formData.pax) || 0;
+                    const isOverCapacity = zone.max_pax && paxNumber > zone.max_pax;
+                    const locked = isZoneLocked(zone.section) || isOverCapacity;
+
                     return (
-                      <button key={zone.id} onClick={() => !locked && setSelectedZone(zone)} disabled={locked} className={`w-full flex items-center border transition-all duration-300 group rounded-sm overflow-hidden text-left relative ${locked ? 'opacity-40 grayscale cursor-not-allowed border-transparent bg-white/5' : selectedZone?.id === zone.id ? 'border-premium-gold bg-premium-gold/5' : 'border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                        <div className="w-24 h-24 sm:w-32 sm:h-28 shrink-0"><img src={getZoneImage(zone.section)} alt={zone.label} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /></div>
-                        <div className="flex-1 p-4 flex items-center justify-between gap-2">
-                          <div><div className="flex items-center gap-2 mb-1">{locked && <Lock size={12} className="text-gray-500"/>}<h4 className={`text-lg font-serif ${selectedZone?.id === zone.id ? 'text-premium-gold' : 'text-white'}`}>{zone.label}</h4></div>{locked ? (<p className="text-[10px] text-red-400 font-sans font-bold uppercase tracking-wider">Min. 8 Guests</p>) : (<p className="text-[10px] text-gray-500 font-sans uppercase tracking-wider">{zone.section === 'vip' ? 'Exclusive & Private' : zone.section === 'outdoor' ? 'Natural Breeze' : 'Cozy Ambience'}</p>)}</div>
-                          {!locked && (<div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedZone?.id === zone.id ? 'border-premium-gold' : 'border-gray-700'}`}>{selectedZone?.id === zone.id && <div className="w-2 h-2 bg-premium-gold rounded-full"></div>}</div>)}
+                      <button 
+                        key={zone.id} 
+                        onClick={() => !locked && setSelectedZone(zone)} 
+                        disabled={locked} 
+                        className={`w-full flex items-center border transition-all duration-300 group rounded-sm p-4 text-left relative 
+                          ${locked 
+                            ? 'opacity-40 grayscale cursor-not-allowed border-transparent bg-white/5' 
+                            : selectedZone?.id === zone.id 
+                              ? 'border-premium-gold bg-premium-gold/5 shadow-[0_0_15px_rgba(192,141,93,0.1)]' 
+                              : 'border-white/10 hover:border-white/30 hover:bg-white/5'
+                          }`}
+                      >
+                        {/* Minimal Icon Box instead of Image */}
+                        <div className={`p-3 rounded-sm mr-4 transition-colors ${selectedZone?.id === zone.id ? 'bg-premium-gold text-black' : 'bg-white/5 text-gray-400 group-hover:text-white'}`}>
+                           {getZoneIcon(zone.section)}
+                        </div>
+
+                        <div className="flex-1 flex items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              {locked && <Lock size={12} className="text-gray-500"/>}
+                              <h4 className={`text-lg font-serif ${selectedZone?.id === zone.id ? 'text-premium-gold' : 'text-white'}`}>
+                                {zone.label}
+                              </h4>
+                            </div>
+                            
+                            {locked ? (
+                              <p className="text-[10px] text-red-400 font-sans font-bold uppercase tracking-wider">
+                                {isOverCapacity ? `Max Capacity: ${zone.max_pax} Guests` : 'Min. 8 Guests'}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-gray-500 font-sans uppercase tracking-wider">
+                                {zone.section === 'vip' ? 'Exclusive & Private' : zone.section === 'outdoor' ? 'Natural Breeze' : 'Cozy Ambience'}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Radio Button UI */}
+                          {!locked && (
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedZone?.id === zone.id ? 'border-premium-gold' : 'border-gray-700'}`}>
+                              {selectedZone?.id === zone.id && <div className="w-2 h-2 bg-premium-gold rounded-full"></div>}
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
