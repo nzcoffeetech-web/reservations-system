@@ -1,60 +1,57 @@
-# Astro Starter Kit: Basics
+# NZ Coffee Intelligence
+
+Single-page analytics dashboard for NZ Coffee in Sungai Choh, Rawang. The app ships as a static `dist/index.html` page with vanilla browser JavaScript and Chart.js. It reads Supabase REST views at runtime and renders a monthly intelligence report.
+
+## Setup
 
 ```sh
-npm create astro@latest -- --template basics
+npm install
+cp .env.example .env
 ```
 
-<!-- ASTRO:REMOVE:START -->
+Add the read-only browser anon key:
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
-
-<!-- ASTRO:REMOVE:END -->
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-<!-- ASTRO:REMOVE:START -->
-
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
-
-<!-- ASTRO:REMOVE:END -->
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+```sh
+SUPABASE_ANON_KEY=...
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+The Supabase project URL is configured in `src/pages/index.astro`. The build script injects `SUPABASE_ANON_KEY` into the generated static HTML without hardcoding it in committed source.
 
-## 🧞 Commands
+## Commands
 
-All commands are run from the root of the project, from a terminal:
+```sh
+npm run dev
+npm test
+npm run build
+npm run preview
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+`npm run build` outputs a static site to `dist/`, suitable for Vercel static hosting.
 
-## 👀 Want to learn more?
+## Monthly Workflow
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+1. Export the latest Calendly bookings CSV.
+2. Export the latest StoreHub customer CSV.
+3. In Supabase Table Editor, import the Calendly CSV into `stg_calendly`.
+4. In Supabase Table Editor, import the StoreHub CSV into `stg_storehub`.
+5. Reload the dashboard. It reads:
+   - `v_cal` for filtered booking activity.
+   - `dash_booking_trend` for monthly booking and pax trend.
+   - `dash_segments` for all-time RFM customer segments.
+   - `dash_customer_base` for all-time customer base value and action counts.
+
+## Data Notes
+
+Calendly booking rows are true time series data, so the dashboard date filter applies to reservations, pax, day-of-week, booking-hour, acquisition, and top-customer views.
+
+StoreHub "Total Spent" is cumulative lifetime value, not monthly revenue. Customer base value and segment metrics are displayed as all-time snapshots and do not change with the date filter.
+
+## Vercel
+
+Set `SUPABASE_ANON_KEY` in the Vercel project environment variables, then deploy with the default build command:
+
+```sh
+npm run build
+```
+
+Use `dist` as the output directory.

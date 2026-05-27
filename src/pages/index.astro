@@ -8,27 +8,27 @@ import BookingMap from '../components/BookingMap.jsx';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>NZ Coffee | The Taste You Never Forget</title>
-    
+
     <link rel="icon" type="image/jpeg" href="/logo.jpg" />
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <link 
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" 
-      rel="stylesheet" 
-      media="print" 
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+      media="print"
       onload="this.media='all'"
     >
     <noscript>
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" 
+      <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap"
         rel="stylesheet"
       >
     </noscript>
   </head>
   <body class="bg-premium-black text-premium-text font-sans antialiased selection:bg-premium-gold selection:text-black">
-    
+
     <Hero />
 
     <section id="booking-section" class="bg-premium-dark py-24 px-6 border-t border-white/5">
@@ -36,7 +36,7 @@ import BookingMap from '../components/BookingMap.jsx';
         <div class="text-center mb-6">
           <h2 class="font-serif text-3xl md:text-4xl text-white mb-3">Reserve Your Spot</h2>
         </div>
-        
+
         <BookingMap client:load />
       </div>
     </section>
