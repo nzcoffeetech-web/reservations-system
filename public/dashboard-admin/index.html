@@ -1,0 +1,1688 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="NZ Coffee monthly intelligence dashboard for bookings, guests, segments, and customer actions."
+    />
+    <title>NZ Coffee Intelligence</title>
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,50,0..1&family=Karla:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --ink: #161f1e;
+        --paper: #faf6ee;
+        --terra: #b85638;
+        --forest: #2d4a37;
+        --amber: #c68a3e;
+        --muted: #8a8a7a;
+        --line: rgba(22, 31, 30, 0.14);
+        --wash: #fffaf1;
+        --danger: #9f3327;
+        --shadow: 0 16px 50px rgba(22, 31, 30, 0.08);
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Karla, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .auth-screen {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        background:
+          linear-gradient(rgba(22, 31, 30, 0.9), rgba(22, 31, 30, 0.94)),
+          var(--ink);
+        color: var(--paper);
+      }
+
+      .auth-panel {
+        width: min(100%, 460px);
+        border: 1px solid rgba(250, 246, 238, 0.16);
+        background: rgba(250, 246, 238, 0.06);
+        padding: 30px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+      }
+
+      .auth-brand {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+
+      .auth-panel h2 {
+        margin: 0;
+        font: 500 clamp(2rem, 8vw, 3.4rem) / 0.92 Fraunces, serif;
+      }
+
+      .auth-panel p {
+        margin: 10px 0 0;
+        color: rgba(250, 246, 238, 0.72);
+        line-height: 1.5;
+      }
+
+      .auth-form {
+        display: grid;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .auth-form label {
+        display: grid;
+        gap: 8px;
+        color: rgba(250, 246, 238, 0.78);
+        font-weight: 700;
+      }
+
+      .auth-form input {
+        min-height: 46px;
+        border: 1px solid rgba(250, 246, 238, 0.22);
+        border-radius: 4px;
+        background: rgba(250, 246, 238, 0.1);
+        color: var(--paper);
+        padding: 0 12px;
+      }
+
+      .auth-form input:focus {
+        outline: 2px solid rgba(184, 86, 56, 0.72);
+        outline-offset: 2px;
+      }
+
+      .auth-form button,
+      .sign-out {
+        min-height: 40px;
+        border: 1px solid var(--terra);
+        border-radius: 4px;
+        background: var(--terra);
+        color: var(--paper);
+        padding: 0 14px;
+        font-weight: 700;
+        transition: transform 140ms var(--ease-out), background-color 160ms var(--ease-out);
+      }
+
+      .auth-form button:hover,
+      .sign-out:hover {
+        background: #c96648;
+      }
+
+      .auth-form button:active,
+      .sign-out:active {
+        transform: scale(0.97);
+      }
+
+      .auth-message {
+        min-height: 24px;
+        margin-top: 14px;
+        color: #f2b49f;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+
+      .auth-message.is-success {
+        color: #f6d8a8;
+      }
+
+      .sign-out {
+        min-height: 34px;
+        background: transparent;
+        color: rgba(250, 246, 238, 0.86);
+      }
+
+      .shell {
+        min-height: 100vh;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--ink);
+        color: var(--paper);
+        border-bottom: 1px solid rgba(250, 246, 238, 0.14);
+      }
+
+      .topbar-inner {
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(230px, 1fr) minmax(280px, auto);
+        gap: 20px;
+        align-items: center;
+        padding: 18px 0;
+      }
+
+      .brand {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .mark {
+        width: 46px;
+        height: 46px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--terra);
+        color: var(--paper);
+        font: 700 1rem Fraunces, serif;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font: 500 clamp(1.35rem, 3vw, 2.2rem) Fraunces, serif;
+        line-height: 1;
+      }
+
+      .brand em {
+        color: #e48b6f;
+        font-style: italic;
+        font-weight: 400;
+      }
+
+      .brand p {
+        margin: 5px 0 0;
+        color: rgba(250, 246, 238, 0.68);
+        font-size: 0.86rem;
+      }
+
+      .filters {
+        display: grid;
+        gap: 10px;
+        justify-items: end;
+      }
+
+      .presets {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+
+      .preset {
+        min-height: 34px;
+        border: 1px solid rgba(250, 246, 238, 0.18);
+        border-radius: 999px;
+        padding: 0 12px;
+        background: transparent;
+        color: rgba(250, 246, 238, 0.78);
+        transition:
+          background-color 160ms var(--ease-out),
+          border-color 160ms var(--ease-out),
+          transform 140ms var(--ease-out);
+      }
+
+      .preset:hover,
+      .preset.is-active {
+        border-color: var(--terra);
+        background: rgba(184, 86, 56, 0.22);
+        color: var(--paper);
+      }
+
+      .preset:active,
+      .refresh:active {
+        transform: scale(0.97);
+      }
+
+      .custom-range {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        color: rgba(250, 246, 238, 0.7);
+        font-size: 0.86rem;
+      }
+
+      .custom-range label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .custom-range input {
+        min-height: 34px;
+        max-width: 150px;
+        border: 1px solid rgba(250, 246, 238, 0.2);
+        border-radius: 4px;
+        background: rgba(250, 246, 238, 0.08);
+        color: var(--paper);
+        padding: 0 8px;
+      }
+
+      .main {
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 30px 0 48px;
+      }
+
+      .report-meta {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--terra);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.76rem;
+      }
+
+      .report-meta h2 {
+        margin: 0;
+        max-width: 720px;
+        font: 400 clamp(2rem, 5vw, 4.5rem) / 0.95 Fraunces, serif;
+      }
+
+      .status {
+        color: var(--muted);
+        line-height: 1.45;
+        text-align: right;
+      }
+
+      .refresh {
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: var(--wash);
+        color: var(--ink);
+        padding: 0 12px;
+        transition: transform 140ms var(--ease-out), border-color 160ms var(--ease-out);
+      }
+
+      .refresh:hover {
+        border-color: var(--terra);
+      }
+
+      .section {
+        padding: 28px 0 0;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .section-header h3 {
+        margin: 0;
+        font: 500 1.45rem Fraunces, serif;
+      }
+
+      .section-header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card,
+      .chart-card,
+      .segment,
+      .table-card {
+        border: 1px solid var(--line);
+        background: rgba(255, 250, 241, 0.72);
+        box-shadow: var(--shadow);
+      }
+
+      .card {
+        min-height: 156px;
+        padding: 18px;
+        display: grid;
+        align-content: space-between;
+        gap: 18px;
+      }
+
+      .card-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .all-time {
+        color: var(--terra);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 700;
+      }
+
+      .kpi-value {
+        margin: 0;
+        font: 300 clamp(2.4rem, 6vw, 4.6rem) / 0.85 Fraunces, serif;
+      }
+
+      .delta {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: rgba(45, 74, 55, 0.12);
+        color: var(--forest);
+        font-weight: 700;
+      }
+
+      .delta.is-down {
+        background: rgba(159, 51, 39, 0.11);
+        color: var(--danger);
+      }
+
+      .delta.is-flat {
+        background: rgba(138, 138, 122, 0.12);
+        color: var(--muted);
+      }
+
+      .intel-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .intel-card {
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--forest);
+        background: var(--wash);
+        padding: 16px;
+        min-height: 164px;
+      }
+
+      .intel-card.warning {
+        border-left-color: var(--danger);
+      }
+
+      .intel-card.watch {
+        border-left-color: var(--amber);
+      }
+
+      .intel-card.action {
+        border-left-color: var(--forest);
+      }
+
+      .tag {
+        display: inline-flex;
+        margin-bottom: 16px;
+        color: var(--muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.74rem;
+      }
+
+      .intel-card strong {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 1.05rem;
+        line-height: 1.28;
+      }
+
+      .intel-card p {
+        margin: 0;
+        color: #4f5550;
+        line-height: 1.45;
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        padding: 22px;
+        color: var(--muted);
+        background: rgba(255, 250, 241, 0.5);
+      }
+
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .chart-card {
+        padding: 16px;
+        min-height: 340px;
+      }
+
+      .chart-card.wide {
+        grid-column: 1 / -1;
+      }
+
+      .chart-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .chart-title h4 {
+        margin: 0;
+        font: 500 1.15rem Fraunces, serif;
+      }
+
+      .chart-title span {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .chart-frame {
+        position: relative;
+        height: 260px;
+      }
+
+      .segments {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .segment {
+        padding: 16px;
+        min-height: 156px;
+      }
+
+      .segment h4 {
+        margin: 0 0 12px;
+        font: 500 1.1rem Fraunces, serif;
+      }
+
+      .segment dl {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        margin: 0;
+      }
+
+      .segment dt {
+        color: var(--muted);
+      }
+
+      .segment dd {
+        margin: 0;
+        font-weight: 700;
+      }
+
+      .table-card {
+        overflow: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 520px;
+      }
+
+      th,
+      td {
+        padding: 13px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      td:last-child,
+      th:last-child {
+        text-align: right;
+      }
+
+      .notice {
+        margin-top: 20px;
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .error {
+        margin-top: 18px;
+        border-left: 5px solid var(--danger);
+        background: #fff2ec;
+        padding: 16px;
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 1080px) {
+        .topbar-inner,
+        .report-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .filters,
+        .status {
+          justify-items: start;
+          text-align: left;
+        }
+
+        .presets,
+        .custom-range {
+          justify-content: flex-start;
+        }
+
+        .kpis,
+        .segments {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .intel-grid,
+        .chart-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .topbar-inner,
+        .main {
+          width: min(100% - 22px, 1440px);
+        }
+
+        .topbar-inner {
+          padding: 14px 0;
+        }
+
+        .brand {
+          align-items: flex-start;
+        }
+
+        .mark {
+          width: 40px;
+          height: 40px;
+        }
+
+        .presets {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
+        }
+
+        .preset {
+          border-radius: 4px;
+        }
+
+        .custom-range {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .custom-range input {
+          width: 100%;
+          max-width: none;
+        }
+
+        .report-meta {
+          align-items: flex-start;
+        }
+
+        .kpis,
+        .segments {
+          grid-template-columns: 1fr;
+        }
+
+        .section-header {
+          display: block;
+        }
+
+        .section-header p {
+          margin-top: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="auth-screen" id="auth-screen">
+      <div class="auth-panel">
+        <div class="auth-brand">
+          <div class="mark">NZ</div>
+          <div>
+            <h2>NZ Coffee Intelligence</h2>
+            <p>Sign in with your approved NZ Coffee email to view the monthly dashboard.</p>
+          </div>
+        </div>
+
+        <form class="auth-form" id="auth-form">
+          <label>
+            Email
+            <input id="auth-email" type="email" autocomplete="email" required />
+          </label>
+          <button id="auth-submit" type="submit">Send magic link</button>
+        </form>
+
+        <div class="auth-message" id="auth-message" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div class="shell is-hidden" id="dashboard-shell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand" aria-label="NZ Coffee Intelligence">
+            <div class="mark">NZ</div>
+            <div>
+              <h1>NZ Coffee <em>Intelligence</em></h1>
+              <p>The taste you never forget</p>
+            </div>
+          </div>
+
+          <form class="filters" id="date-filter">
+            <div class="presets" aria-label="Date range presets">
+              <button class="preset is-active" type="button" data-preset="this-month">This Month</button>
+              <button class="preset" type="button" data-preset="prev-month">Prev Month</button>
+              <button class="preset" type="button" data-preset="last-7">Last 7 Days</button>
+              <button class="preset" type="button" data-preset="last-30">Last 30 Days</button>
+              <button class="preset" type="button" data-preset="last-90">Last 90 Days</button>
+              <button class="preset" type="button" data-preset="all-time">All Time</button>
+            </div>
+            <div class="custom-range">
+              <label>From <input id="from-date" type="date" /></label>
+              <label>To <input id="to-date" type="date" /></label>
+              <button class="sign-out" id="sign-out" type="button">Sign out</button>
+            </div>
+          </form>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="report-meta">
+          <div>
+            <p class="eyebrow">Monthly Intelligence Report</p>
+            <h2>Kampung cafe signals from bookings and all-time customer value.</h2>
+          </div>
+          <div class="status">
+            <div id="range-label">Loading Supabase views...</div>
+            <button class="refresh" id="refresh" type="button">Refresh data</button>
+          </div>
+        </section>
+
+        <div class="error is-hidden" id="error"></div>
+
+        <section class="section">
+          <div class="section-header">
+            <h3>What needs your attention</h3>
+            <p>Rule-based warnings, watches, and actions from the selected period.</p>
+          </div>
+          <div class="intel-grid" id="intelligence"></div>
+        </section>
+
+        <section class="section">
+          <div class="kpis" id="kpis"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <h3>Booking Activity</h3>
+            <p>Calendly activity uses the selected date range.</p>
+          </div>
+          <div class="chart-grid">
+            <article class="chart-card wide">
+              <div class="chart-title">
+                <h4>Monthly trend</h4>
+                <span>Bookings and pax from Supabase monthly view</span>
+              </div>
+              <div class="chart-frame"><canvas id="monthly-chart"></canvas></div>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title">
+                <h4>Day of week</h4>
+                <span>Filtered reservations</span>
+              </div>
+              <div class="chart-frame"><canvas id="dow-chart"></canvas></div>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title">
+                <h4>Booking hour</h4>
+                <span>Filtered reservations</span>
+              </div>
+              <div class="chart-frame"><canvas id="hour-chart"></canvas></div>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title">
+                <h4>Acquisition source</h4>
+                <span>Filtered utm_source</span>
+              </div>
+              <div class="chart-frame"><canvas id="source-chart"></canvas></div>
+            </article>
+            <article class="table-card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Top customer</th>
+                    <th>Bookings</th>
+                    <th>Total pax</th>
+                  </tr>
+                </thead>
+                <tbody id="top-customers"></tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <h3>Customer Segments</h3>
+            <p>StoreHub values are all-time snapshots, not monthly revenue.</p>
+          </div>
+          <div class="segments" id="segments"></div>
+          <p class="notice">
+            Revenue note: StoreHub "Total Spent" is cumulative lifetime value. Date filters apply only to
+            Calendly booking activity. Customer base value and RFM segments are labelled as all-time snapshots.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const REPORT_TIMEZONE = 'Asia/Kuala_Lumpur';
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function dateFromKey(dateKey) {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
+function dateKeyFromUtc(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(dateKey, days) {
+  return dateKeyFromUtc(new Date(dateFromKey(dateKey).getTime() + days * MS_PER_DAY));
+}
+
+function daysBetweenInclusive(from, to) {
+  return Math.max(1, Math.round((dateFromKey(to) - dateFromKey(from)) / MS_PER_DAY) + 1);
+}
+
+function startOfMonth(dateKey) {
+  return `${dateKey.slice(0, 7)}-01`;
+}
+
+function previousMonthRange(nowKey) {
+  const now = dateFromKey(nowKey);
+  const firstThisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const firstPrevMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const lastPrevMonth = new Date(firstThisMonth.getTime() - MS_PER_DAY);
+
+  return {
+    from: dateKeyFromUtc(firstPrevMonth),
+    to: dateKeyFromUtc(lastPrevMonth),
+  };
+}
+
+export function toMalaysiaDateKey(value) {
+  if (!value) return '';
+
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: REPORT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${byType.year}-${byType.month}-${byType.day}`;
+}
+
+export function getLatestStartDate(bookings = []) {
+  return bookings
+    .map((booking) => booking.start_time)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b) - new Date(a))[0];
+}
+
+export function buildDateRange(preset, bookings = [], custom = {}) {
+  const datedBookings = bookings.filter((booking) => booking.start_time);
+  const latestKey = toMalaysiaDateKey(getLatestStartDate(datedBookings) || new Date());
+  const sortedKeys = datedBookings
+    .map((booking) => toMalaysiaDateKey(booking.start_time))
+    .sort();
+
+  if (preset === 'custom') {
+    return {
+      from: custom.from || sortedKeys[0] || latestKey,
+      to: custom.to || sortedKeys.at(-1) || latestKey,
+    };
+  }
+
+  if (preset === 'prev-month') return previousMonthRange(latestKey);
+
+  if (preset === 'last-7') return { from: addDays(latestKey, -6), to: latestKey };
+  if (preset === 'last-30') return { from: addDays(latestKey, -29), to: latestKey };
+  if (preset === 'last-90') return { from: addDays(latestKey, -89), to: latestKey };
+
+  if (preset === 'all-time') {
+    return {
+      from: sortedKeys[0] || latestKey,
+      to: sortedKeys.at(-1) || latestKey,
+    };
+  }
+
+  return { from: startOfMonth(latestKey), to: latestKey };
+}
+
+export function getPriorRange(range) {
+  const length = daysBetweenInclusive(range.from, range.to);
+  const to = addDays(range.from, -1);
+
+  return {
+    from: addDays(to, -(length - 1)),
+    to,
+  };
+}
+
+export function filterBookings(bookings = [], range) {
+  return bookings.filter((booking) => {
+    const key = toMalaysiaDateKey(booking.start_time);
+    return key && key >= range.from && key <= range.to;
+  });
+}
+
+function isCanceled(booking) {
+  return booking.canceled === true || booking.canceled === 'true';
+}
+
+function getPax(booking) {
+  const pax = Number(booking.pax);
+  return Number.isFinite(pax) ? pax : 0;
+}
+
+function rounded(value, digits = 2) {
+  return Number(value.toFixed(digits));
+}
+
+export function deltaPct(current, previous) {
+  if (!previous) return current ? null : 0;
+  return rounded(((current - previous) / previous) * 100);
+}
+
+function metric(current, previous, digits = 0) {
+  return {
+    value: rounded(current, digits),
+    previous: rounded(previous, digits),
+    deltaPct: deltaPct(current, previous),
+  };
+}
+
+function summarizePeriod(bookings) {
+  const active = bookings.filter((booking) => !isCanceled(booking));
+  const totalPax = active.reduce((sum, booking) => sum + getPax(booking), 0);
+  const group8Pax = active
+    .filter((booking) => getPax(booking) >= 8)
+    .reduce((sum, booking) => sum + getPax(booking), 0);
+
+  const midweekBookings = active.filter((booking) => {
+    const day = dayIndexForBooking(booking);
+    return day === 2 || day === 3;
+  }).length;
+
+  const weekendBookings = active.filter((booking) => {
+    const day = dayIndexForBooking(booking);
+    return day === 0 || day === 6;
+  }).length;
+
+  return {
+    reservations: active.length,
+    totalPax,
+    avgGroupSize: active.length ? totalPax / active.length : 0,
+    cancellationRate: bookings.length
+      ? (bookings.filter(isCanceled).length / bookings.length) * 100
+      : 0,
+    group8PaxShare: totalPax ? (group8Pax / totalPax) * 100 : 0,
+    midweekBookings,
+    weekendBookings,
+  };
+}
+
+export function computePeriodMetrics(bookings = [], range) {
+  const currentBookings = filterBookings(bookings, range);
+  const previousBookings = filterBookings(bookings, getPriorRange(range));
+  const current = summarizePeriod(currentBookings);
+  const previous = summarizePeriod(previousBookings);
+
+  return {
+    reservations: metric(current.reservations, previous.reservations),
+    totalPax: metric(current.totalPax, previous.totalPax),
+    avgGroupSize: metric(current.avgGroupSize, previous.avgGroupSize, 2),
+    cancellationRate: rounded(current.cancellationRate),
+    group8PaxShare: rounded(current.group8PaxShare),
+    midweekBookings: current.midweekBookings,
+    weekendBookings: current.weekendBookings,
+    currentBookings,
+    previousBookings,
+  };
+}
+
+export function dayIndexForBooking(booking) {
+  return new Date(`${toMalaysiaDateKey(booking.start_time)}T00:00:00.000Z`).getUTCDay();
+}
+
+export function groupByDayOfWeek(bookings = []) {
+  const buckets = DAY_NAMES.map((day) => ({ label: day, bookings: 0 }));
+  bookings
+    .filter((booking) => !isCanceled(booking))
+    .forEach((booking) => {
+      buckets[dayIndexForBooking(booking)].bookings += 1;
+    });
+  return buckets;
+}
+
+export function groupByBookingHour(bookings = []) {
+  const formatter = new Intl.DateTimeFormat('en', {
+    timeZone: REPORT_TIMEZONE,
+    hour: '2-digit',
+    hour12: false,
+  });
+  const counts = new Map();
+
+  bookings
+    .filter((booking) => !isCanceled(booking))
+    .forEach((booking) => {
+      const hour = formatter.format(new Date(booking.start_time));
+      const label = `${hour}:00`;
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+
+  return [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, bookingsCount]) => ({ label, bookings: bookingsCount }));
+}
+
+export function groupAcquisitionSources(bookings = []) {
+  const counts = new Map();
+  bookings
+    .filter((booking) => !isCanceled(booking))
+    .forEach((booking) => {
+      const source = (booking.utm_source || 'Direct / unknown').trim() || 'Direct / unknown';
+      counts.set(source, (counts.get(source) || 0) + 1);
+    });
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, bookingsCount]) => ({ label, bookings: bookingsCount }));
+}
+
+export function topCustomersByPax(bookings = []) {
+  const customers = new Map();
+
+  bookings
+    .filter((booking) => !isCanceled(booking))
+    .forEach((booking) => {
+      const name = (booking.name || 'Unknown customer').trim() || 'Unknown customer';
+      const current = customers.get(name) || { name, pax: 0, bookings: 0 };
+      current.pax += getPax(booking);
+      current.bookings += 1;
+      customers.set(name, current);
+    });
+
+  return [...customers.values()]
+    .sort((a, b) => b.pax - a.pax || b.bookings - a.bookings || a.name.localeCompare(b.name))
+    .slice(0, 5);
+}
+
+function formatPct(value) {
+  return `${rounded(value)}%`;
+}
+
+function isApril(range) {
+  return range.from.slice(5, 7) === '04' && range.to.slice(5, 7) === '04';
+}
+
+export function buildIntelligenceCards({ metrics, customerBase = {}, range }) {
+  const cards = [];
+  const totalCustomers = Number(customerBase.total_customers) || 0;
+  const oneTimeShare = totalCustomers ? ((Number(customerBase.one_time) || 0) / totalCustomers) * 100 : 0;
+  const midweekThreshold = metrics.weekendBookings * 0.4;
+
+  if (metrics.reservations.deltaPct !== null && metrics.reservations.deltaPct < -30) {
+    const aprilNote = isApril(range) ? ' This looks like a post-Ramadan dip.' : '';
+    cards.push({
+      tag: 'Warning',
+      tone: 'warning',
+      finding: `Bookings are down ${Math.abs(metrics.reservations.deltaPct)}% vs the prior period.${aprilNote}`,
+      action: 'Push a short weekday reservation offer on WhatsApp and pin it on Instagram for 72 hours.',
+    });
+  }
+
+  if (metrics.cancellationRate > 10) {
+    cards.push({
+      tag: 'Warning',
+      tone: 'warning',
+      finding: `Cancellation rate is ${formatPct(metrics.cancellationRate)}.`,
+      action: 'Send same-day confirmation messages and ask large groups to reconfirm before lunch service.',
+    });
+  }
+
+  if ((Number(customerBase.sleeping_giants) || 0) >= 50) {
+    cards.push({
+      tag: 'Warning',
+      tone: 'warning',
+      finding: `Sleeping giants count is ${Number(customerBase.sleeping_giants)} customers.`,
+      action: 'Run a direct WhatsApp winback with a family-set hook for high-value dormant guests.',
+    });
+  }
+
+  if (oneTimeShare > 60) {
+    cards.push({
+      tag: 'Watch',
+      tone: 'watch',
+      finding: `One-time customers are ${formatPct(oneTimeShare)} of the base.`,
+      action: 'Add a second-visit bounce-back note to receipts and post-visit messages.',
+    });
+  }
+
+  if (metrics.weekendBookings > 0 && metrics.midweekBookings < midweekThreshold) {
+    cards.push({
+      tag: 'Watch',
+      tone: 'watch',
+      finding: `Tue/Wed bookings are ${metrics.midweekBookings}, below 40% of weekend volume (${metrics.weekendBookings}).`,
+      action: 'Create a Tue-Wed kampung lunch bundle and promote it to nearby Rawang offices.',
+    });
+  }
+
+  if ((Number(customerBase.winback_ready) || 0) >= 10) {
+    cards.push({
+      tag: 'Action',
+      tone: 'action',
+      finding: `${Number(customerBase.winback_ready)} customers are winback-ready.`,
+      action: 'Send a personal return invite with a limited weekend table allocation.',
+    });
+  }
+
+  if ((Number(customerBase.almost_habitual) || 0) >= 10) {
+    cards.push({
+      tag: 'Action',
+      tone: 'action',
+      finding: `${Number(customerBase.almost_habitual)} customers are almost habitual.`,
+      action: 'Offer them a simple visit-three reward to convert repeat intent into habit.',
+    });
+  }
+
+  if ((Number(customerBase.birthdays_this_month) || 0) >= 1) {
+    cards.push({
+      tag: 'Action',
+      tone: 'action',
+      finding: `${Number(customerBase.birthdays_this_month)} birthday guests are due this month.`,
+      action: 'Invite them for a small birthday table setup and pre-book the group.',
+    });
+  }
+
+  if (metrics.group8PaxShare > 35) {
+    cards.push({
+      tag: 'Action',
+      tone: 'action',
+      finding: `Groups of 8+ represent ${formatPct(metrics.group8PaxShare)} of pax.`,
+      action: 'Feature a large-group reservation slot and prepare family-style add-ons.',
+    });
+  }
+
+  if ((Number(customerBase.vips) || 0) >= 5) {
+    cards.push({
+      tag: 'Action',
+      tone: 'action',
+      finding: `${Number(customerBase.vips)} VIP customers are in the all-time base.`,
+      action: 'Give VIPs first notice for seasonal specials and premium weekend tables.',
+    });
+  }
+
+  return cards;
+}
+
+
+
+      const SUPABASE_URL = 'https://vjtvuhtyilxnepqtppoq.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_US_-DzJhJ1tTmL8Jt3rQiQ_RazmkLhL';
+      const DASHBOARD_PATH = '/dashboard-admin';
+      const ALLOWED_EMAILS = ['nzcoffee.tech@gmail.com', 'nzcoffeeco@gmail.com'];
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const CHART_TEXT = '#4f5550';
+      const CHART_GRID = 'rgba(22, 31, 30, 0.12)';
+
+      const state = {
+        session: null,
+        dashboardReady: false,
+        authNotice: '',
+        preset: 'this-month',
+        range: null,
+        data: {
+          bookings: [],
+          trend: [],
+          segments: [],
+          customerBase: {},
+        },
+        charts: {},
+      };
+
+      const elements = {
+        authScreen: document.querySelector('#auth-screen'),
+        dashboardShell: document.querySelector('#dashboard-shell'),
+        authForm: document.querySelector('#auth-form'),
+        authEmail: document.querySelector('#auth-email'),
+        authSubmit: document.querySelector('#auth-submit'),
+        authMessage: document.querySelector('#auth-message'),
+        signOut: document.querySelector('#sign-out'),
+        error: document.querySelector('#error'),
+        rangeLabel: document.querySelector('#range-label'),
+        kpis: document.querySelector('#kpis'),
+        intelligence: document.querySelector('#intelligence'),
+        segments: document.querySelector('#segments'),
+        topCustomers: document.querySelector('#top-customers'),
+        from: document.querySelector('#from-date'),
+        to: document.querySelector('#to-date'),
+        refresh: document.querySelector('#refresh'),
+        presets: [...document.querySelectorAll('[data-preset]')],
+      };
+
+      const currency = new Intl.NumberFormat('en-MY', {
+        style: 'currency',
+        currency: 'MYR',
+        maximumFractionDigits: 0,
+      });
+
+      const number = new Intl.NumberFormat('en-MY', {
+        maximumFractionDigits: 2,
+      });
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => {
+          const entities = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          };
+          return entities[character];
+        });
+      }
+
+      function showError(message) {
+        elements.error.textContent = message;
+        elements.error.classList.remove('is-hidden');
+      }
+
+      function clearError() {
+        elements.error.textContent = '';
+        elements.error.classList.add('is-hidden');
+      }
+
+      function setAuthMessage(message, className = '') {
+        elements.authMessage.textContent = message;
+        elements.authMessage.className = `auth-message${className ? ` ${className}` : ''}`;
+      }
+
+      function showLogin(message = state.authNotice) {
+        state.session = null;
+        state.dashboardReady = false;
+        elements.dashboardShell.classList.add('is-hidden');
+        elements.authScreen.classList.remove('is-hidden');
+        setAuthMessage(message);
+      }
+
+      function showDashboard() {
+        elements.authScreen.classList.add('is-hidden');
+        elements.dashboardShell.classList.remove('is-hidden');
+      }
+
+      function userIsAllowed(session) {
+        const email = session?.user?.email?.trim().toLowerCase();
+        return email && ALLOWED_EMAILS.includes(email);
+      }
+
+      async function fetchView(view) {
+        if (!state.session?.access_token) {
+          throw new Error('Missing authenticated Supabase session. Sign in again.');
+        }
+
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${view}?select=*`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${state.session.access_token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(`${view} failed (${response.status}): ${detail}`);
+        }
+
+        return response.json();
+      }
+
+      async function loadData() {
+        const [bookings, trend, segments, customerBaseRows] = await Promise.all([
+          fetchView('v_cal'),
+          fetchView('dash_booking_trend'),
+          fetchView('dash_segments'),
+          fetchView('dash_customer_base'),
+        ]);
+
+        state.data = {
+          bookings: bookings || [],
+          trend: trend || [],
+          segments: segments || [],
+          customerBase: customerBaseRows?.[0] || {},
+        };
+      }
+
+      function setPreset(preset) {
+        state.preset = preset;
+        elements.presets.forEach((button) => {
+          button.classList.toggle('is-active', button.dataset.preset === preset);
+        });
+      }
+
+      function syncRangeInputs(range) {
+        elements.from.value = range.from;
+        elements.to.value = range.to;
+      }
+
+      function chooseRange() {
+        state.range = buildDateRange(state.preset, state.data.bookings, {
+          from: elements.from.value,
+          to: elements.to.value,
+        });
+        syncRangeInputs(state.range);
+      }
+
+      function deltaMarkup(metric) {
+        if (metric.deltaPct === null) return '<span class="delta is-flat">New vs prior</span>';
+        const className = metric.deltaPct < 0 ? 'delta is-down' : metric.deltaPct === 0 ? 'delta is-flat' : 'delta';
+        const prefix = metric.deltaPct > 0 ? '+' : '';
+        return `<span class="${className}">${prefix}${metric.deltaPct}% vs prior</span>`;
+      }
+
+      function renderKpis(metrics) {
+        const base = state.data.customerBase;
+        const cards = [
+          {
+            label: 'Reservations',
+            value: number.format(metrics.reservations.value),
+            delta: deltaMarkup(metrics.reservations),
+          },
+          {
+            label: 'Total Pax',
+            value: number.format(metrics.totalPax.value),
+            delta: deltaMarkup(metrics.totalPax),
+          },
+          {
+            label: 'Customer Base Value',
+            value: currency.format(Number(base.lifetime_value) || 0),
+            delta: '<span class="all-time">all-time StoreHub snapshot</span>',
+          },
+          {
+            label: 'Avg Group Size',
+            value: number.format(metrics.avgGroupSize.value),
+            delta: deltaMarkup(metrics.avgGroupSize),
+          },
+        ];
+
+        elements.kpis.innerHTML = cards
+          .map(
+            (card) => `
+              <article class="card">
+                <div class="card-label"><span>${card.label}</span></div>
+                <p class="kpi-value">${card.value}</p>
+                <div>${card.delta}</div>
+              </article>
+            `,
+          )
+          .join('');
+      }
+
+      function renderIntelligence(metrics) {
+        const cards = buildIntelligenceCards({
+          metrics,
+          customerBase: state.data.customerBase,
+          range: state.range,
+        });
+
+        if (!cards.length) {
+          elements.intelligence.innerHTML =
+            '<div class="empty">No attention thresholds are currently triggered for this range.</div>';
+          return;
+        }
+
+        elements.intelligence.innerHTML = cards
+          .map(
+            (card) => `
+              <article class="intel-card ${card.tone}">
+                <span class="tag">${card.tag}</span>
+                <strong>${card.finding}</strong>
+                <p>${card.action}</p>
+              </article>
+            `,
+          )
+          .join('');
+      }
+
+      function baseChartOptions() {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: CHART_TEXT,
+                font: { family: 'Karla' },
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: CHART_TEXT, font: { family: 'Karla' } },
+              grid: { display: false },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: CHART_TEXT, precision: 0, font: { family: 'Karla' } },
+              grid: { color: CHART_GRID },
+            },
+          },
+        };
+      }
+
+      function upsertChart(id, config) {
+        state.charts[id]?.destroy();
+        state.charts[id] = new Chart(document.getElementById(id), config);
+      }
+
+      function monthsInRange() {
+        return state.data.trend
+          .filter((row) => {
+            const month = String(row.month || '').slice(0, 7);
+            return month >= state.range.from.slice(0, 7) && month <= state.range.to.slice(0, 7);
+          })
+          .sort((a, b) => String(a.month).localeCompare(String(b.month)));
+      }
+
+      function renderCharts(filteredBookings) {
+        const trend = monthsInRange();
+        const dayRows = groupByDayOfWeek(filteredBookings);
+        const hourRows = groupByBookingHour(filteredBookings);
+        const sourceRows = groupAcquisitionSources(filteredBookings).slice(0, 8);
+
+        upsertChart('monthly-chart', {
+          type: 'bar',
+          data: {
+            labels: trend.map((row) => new Date(row.month).toLocaleDateString('en-MY', { month: 'short', year: 'numeric' })),
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Bookings',
+                data: trend.map((row) => Number(row.bookings) || 0),
+                backgroundColor: '#b85638',
+                borderRadius: 3,
+              },
+              {
+                type: 'line',
+                label: 'Pax',
+                data: trend.map((row) => Number(row.total_pax) || 0),
+                borderColor: '#2d4a37',
+                backgroundColor: '#2d4a37',
+                tension: 0.3,
+                pointRadius: 3,
+                yAxisID: 'y',
+              },
+            ],
+          },
+          options: baseChartOptions(),
+        });
+
+        upsertChart('dow-chart', {
+          type: 'bar',
+          data: {
+            labels: dayRows.map((row) => row.label),
+            datasets: [
+              {
+                label: 'Bookings',
+                data: dayRows.map((row) => row.bookings),
+                backgroundColor: '#c68a3e',
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: baseChartOptions(),
+        });
+
+        upsertChart('hour-chart', {
+          type: 'bar',
+          data: {
+            labels: hourRows.map((row) => row.label),
+            datasets: [
+              {
+                label: 'Bookings',
+                data: hourRows.map((row) => row.bookings),
+                backgroundColor: '#2d4a37',
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: baseChartOptions(),
+        });
+
+        upsertChart('source-chart', {
+          type: 'bar',
+          data: {
+            labels: sourceRows.map((row) => row.label),
+            datasets: [
+              {
+                label: 'Bookings',
+                data: sourceRows.map((row) => row.bookings),
+                backgroundColor: '#161f1e',
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            ...baseChartOptions(),
+            indexAxis: 'y',
+          },
+        });
+      }
+
+      function renderSegments() {
+        elements.segments.innerHTML = state.data.segments
+          .map(
+            (segment) => `
+              <article class="segment">
+                <h4>${escapeHtml(segment.segment || 'Segment')}</h4>
+                <dl>
+                  <dt>Customers</dt><dd>${number.format(Number(segment.customers) || 0)}</dd>
+                  <dt>Avg spent</dt><dd>${currency.format(Number(segment.avg_spent) || 0)}</dd>
+                  <dt>Avg visits</dt><dd>${number.format(Number(segment.avg_visits) || 0)}</dd>
+                  <dt>Value</dt><dd>${currency.format(Number(segment.segment_value) || 0)}</dd>
+                </dl>
+              </article>
+            `,
+          )
+          .join('');
+      }
+
+      function renderTopCustomers(filteredBookings) {
+        const rows = topCustomersByPax(filteredBookings);
+        elements.topCustomers.innerHTML = rows.length
+          ? rows
+              .map(
+                (row) => `
+                  <tr>
+                    <td>${escapeHtml(row.name)}</td>
+                    <td>${number.format(row.bookings)}</td>
+                    <td>${number.format(row.pax)}</td>
+                  </tr>
+                `,
+              )
+              .join('')
+          : '<tr><td colspan="3">No reservations in this range.</td></tr>';
+      }
+
+      function render() {
+        chooseRange();
+        const metrics = computePeriodMetrics(state.data.bookings, state.range);
+        const filteredBookings = filterBookings(state.data.bookings, state.range);
+
+        elements.rangeLabel.textContent = `${state.range.from} to ${state.range.to} / ${filteredBookings.length} raw booking rows`;
+        renderIntelligence(metrics);
+        renderKpis(metrics);
+        renderCharts(filteredBookings);
+        renderSegments();
+        renderTopCustomers(filteredBookings);
+      }
+
+      elements.presets.forEach((button) => {
+        button.addEventListener('click', () => {
+          setPreset(button.dataset.preset);
+          render();
+        });
+      });
+
+      [elements.from, elements.to].forEach((input) => {
+        input.addEventListener('change', () => {
+          setPreset('custom');
+          render();
+        });
+      });
+
+      elements.refresh.addEventListener('click', async () => {
+        elements.rangeLabel.textContent = 'Refreshing Supabase views...';
+        clearError();
+        try {
+          await loadData();
+          render();
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+
+      elements.authForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        state.authNotice = '';
+        const email = elements.authEmail.value.trim().toLowerCase();
+        if (!email) return;
+
+        elements.authSubmit.disabled = true;
+        setAuthMessage('Sending magic link...');
+
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}${DASHBOARD_PATH}`,
+          },
+        });
+
+        elements.authSubmit.disabled = false;
+
+        if (error) {
+          setAuthMessage(error.message);
+          return;
+        }
+
+        setAuthMessage('Check your email for the NZ Coffee dashboard magic link.', 'is-success');
+      });
+
+      elements.signOut.addEventListener('click', async () => {
+        state.authNotice = '';
+        await supabase.auth.signOut();
+        showLogin();
+      });
+
+      async function initDashboard() {
+        clearError();
+        elements.rangeLabel.textContent = 'Loading Supabase views...';
+        try {
+          await loadData();
+          render();
+        } catch (error) {
+          showError(error.message);
+          elements.rangeLabel.textContent = 'Dashboard could not load.';
+        }
+      }
+
+      async function handleSession(session) {
+        if (!session) {
+          showLogin();
+          return;
+        }
+
+        if (!userIsAllowed(session)) {
+          state.authNotice = 'Access denied.';
+          await supabase.auth.signOut();
+          showLogin();
+          return;
+        }
+
+        state.session = session;
+        showDashboard();
+
+        if (!state.dashboardReady) {
+          state.dashboardReady = true;
+          await initDashboard();
+        }
+      }
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        showLogin(sessionError.message);
+      } else {
+        await handleSession(sessionData.session);
+      }
+
+      supabase.auth.onAuthStateChange((_event, session) => {
+        handleSession(session);
+      });
+    </script>
+  </body>
+</html>
