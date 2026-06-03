@@ -482,6 +482,29 @@
     }
     .empty-td { text-align: center; color: #9a8c7a; padding: 1.5rem; }
 
+    /* ── Pagination ────────────────────────────────────── */
+    .leads-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding-top: 0.5rem;
+    }
+    .leads-pagination button {
+      padding: 0.28rem 0.7rem;
+      border: 1.5px solid #e8dfc8;
+      border-radius: 4px;
+      background: transparent;
+      color: #7a6a50;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .leads-pagination button:hover:not(:disabled) { border-color: #C08D5D; color: #8b5a2a; }
+    .leads-pagination button:disabled { opacity: 0.35; cursor: default; }
+    .page-info { font-size: 0.78rem; color: #9a8c7a; min-width: 8rem; text-align: center; }
+
     /* ── Acquisition note ──────────────────────────────── */
     .acq-note {
       font-size: 0.82rem;
@@ -635,6 +658,11 @@
             <tbody id="leads-tbody"></tbody>
           </table>
         </div>
+        <div class="leads-pagination">
+          <button id="leads-prev" disabled>← Prev</button>
+          <span id="leads-page-info" class="page-info">—</span>
+          <button id="leads-next">Next →</button>
+        </div>
       </section>
 
     </div>
@@ -655,9 +683,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   const ALLOWED   = ['nzcoffee.tech@gmail.com', 'nzcoffeeco@gmail.com'];
 
   /* ── State ──────────────────────────────────────────── */
-  let leads       = [];
-  let segPlain    = [];
-  let segRfm      = [];
+  const PAGE_SIZE = 100;
+
+  let leads       = [];       // current page only
+  let leadsPage   = 0;
+  let leadsTotal  = 0;
+  let kpiSummary  = {};
+  let segCounts   = [];       // from v_segment_counts (pre-aggregated)
+  let rfmCounts   = [];       // from v_rfm_counts     (pre-aggregated)
   let bookings    = [];
   let dateMode    = 'month';
   let customFrom  = null;
@@ -741,29 +774,53 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   ══════════════════════════════════════════════════════ */
   async function loadData() {
     hideError();
+    leadsPage = 0;
 
-    const [r0, r1, r2, r3] = await Promise.all([
-      db.from('v_leads').select('*'),
-      db.from('v_segments_plain').select('*'),
-      db.from('v_segments_rfm').select('*'),
+    const [r0, r1, r2, r3, r4] = await Promise.all([
+      db.from('v_kpi_summary').select('*').single(),
+      db.from('v_segment_counts').select('*'),
+      db.from('v_rfm_counts').select('*'),
       db.from('calendly_bookings').select('*'),
+      fetchLeadsPage(0),
     ]);
 
     const errs = [
-      r0.error && `v_leads: ${r0.error.message}`,
-      r1.error && `v_segments_plain: ${r1.error.message}`,
-      r2.error && `v_segments_rfm: ${r2.error.message}`,
+      r0.error && `v_kpi_summary: ${r0.error.message}`,
+      r1.error && `v_segment_counts: ${r1.error.message}`,
+      r2.error && `v_rfm_counts: ${r2.error.message}`,
       r3.error && `calendly_bookings: ${r3.error.message}`,
+      r4.error && `v_leads: ${r4.error.message}`,
     ].filter(Boolean);
 
     if (errs.length) showError(errs.join(' | '));
 
-    leads    = r0.data || [];
-    segPlain = r1.data || [];
-    segRfm   = r2.data || [];
-    bookings = r3.data || [];
+    kpiSummary = r0.data || {};
+    segCounts  = r1.data || [];
+    rfmCounts  = r2.data || [];
+    bookings   = r3.data || [];
+    leads      = r4.data || [];
+    leadsTotal = r4.count ?? 0;
 
     render();
+  }
+
+  /* Build a paginated, server-sorted, server-filtered leads query */
+  function fetchLeadsPage(page) {
+    const from = page * PAGE_SIZE;
+    const to   = from + PAGE_SIZE - 1;
+
+    let q = db
+      .from('v_leads')
+      .select('phone_e164, name, total_spent, total_visits, last_visit, total_bookings, lead_type, utm_source',
+              { count: 'exact' })
+      .order(sortCol, { ascending: sortAsc })
+      .range(from, to);
+
+    if (leadsFilter === 'bookers') q = q.eq('lead_type', 'customer + booker');
+    else if (leadsFilter === 'walkins') q = q.eq('lead_type', 'customer (walk-in)');
+    else if (leadsFilter === 'hot')     q = q.eq('lead_type', 'booked, no StoreHub match');
+
+    return q;
   }
 
   function showError(msg) {
@@ -855,20 +912,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   }
 
   function renderKPI() {
-    /* 1. Total customers */
+    const k = kpiSummary;
+
+    /* 1. Total customers — from v_kpi_summary (full table count) */
+    const nCustomers = Number(k.total_customers || 0);
     setKPI('kpi-customers',
-      leads.length.toLocaleString(),
+      nCustomers.toLocaleString(),
       'Total customers',
-      `${leads.length} people in your database`);
+      `${nCustomers.toLocaleString()} people in your database`);
 
-    /* 2. Booking value signal */
-    const bookers = leads.filter(l => l.lead_type === 'customer + booker');
-    const walkins = leads.filter(l => l.lead_type === 'customer (walk-in)');
-    const avgB = bookers.length
-      ? bookers.reduce((s, l) => s + (l.total_spent || 0), 0) / bookers.length : 0;
-    const avgW = walkins.length
-      ? walkins.reduce((s, l) => s + (l.total_spent || 0), 0) / walkins.length : 0;
-
+    /* 2. Booking value signal — pre-computed averages from v_kpi_summary */
+    const avgB = Number(k.avg_booker_spend || 0);
+    const avgW = Number(k.avg_walkin_spend || 0);
     if (avgB > 0 && avgW > 0) {
       const mult = (avgB / avgW).toFixed(1);
       setKPI('kpi-signal', `${mult}×`,
@@ -876,18 +931,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
         `Customers who book online spend ${mult}× more than walk-ins`);
     } else if (avgB > 0) {
       setKPI('kpi-signal', fmtRM(avgB), 'Avg online booker spend',
-        `Average across ${bookers.length} booking customers`);
+        `Average across online booking customers`);
     } else {
       setKPI('kpi-signal', '—', 'Online vs walk-in spend',
         'Need both booker + walk-in data to compare');
     }
 
-    /* 3. Lifetime revenue */
-    const total = leads.reduce((s, l) => s + (l.total_spent || 0), 0);
-    setKPI('kpi-revenue', fmtRM(total), 'Lifetime revenue',
-      `All-time spend across ${leads.length} customers`);
+    /* 3. Lifetime revenue — summed in SQL */
+    setKPI('kpi-revenue', fmtRM(k.lifetime_revenue), 'Lifetime revenue',
+      `All-time spend across ${nCustomers.toLocaleString()} customers`);
 
-    /* 4. Confirmed bookings (date-filtered) */
+    /* 4. Confirmed bookings (date-filtered from in-memory bookings) */
     const range = getDateRange();
     const confirmed = bookings.filter(b => {
       if (isCanceled(b)) return false;
@@ -1023,41 +1077,30 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
   function renderSegments() {
     const container = document.getElementById('segments-container');
     if (segView === 'plain') {
-      /* aggregate by segment_label */
-      const groups = {};
-      segPlain.forEach(c => {
-        const lbl = c.segment_label || 'Unknown';
-        if (!groups[lbl]) groups[lbl] = {
-          label: lbl, meaning: c.segment_meaning || '', action: c.segment_action || '',
-          count: 0, total: 0
-        };
-        groups[lbl].count++;
-        groups[lbl].total += (c.total_spent || 0);
-      });
+      /* v_segment_counts is already aggregated and sorted by total_value desc */
+      const maxTot = segCounts.length ? segCounts[0].total_value : 1;
 
-      const sorted  = Object.values(groups).sort((a, b) => b.total - a.total);
-      const maxTot  = sorted.length ? sorted[0].total : 1;
-
-      container.innerHTML = sorted.length
-        ? sorted.map(g => {
-            const pct = maxTot > 0 ? Math.round((g.total / maxTot) * 100) : 0;
+      container.innerHTML = segCounts.length
+        ? segCounts.map(g => {
+            const pct = maxTot > 0 ? Math.round((g.total_value / maxTot) * 100) : 0;
+            const n   = Number(g.customers);
             return `<div class="seg-card">
               <div class="seg-row">
-                <span class="seg-label">${esc(g.label)}</span>
-                <span class="seg-count">${g.count} customer${g.count !== 1 ? 's' : ''}</span>
+                <span class="seg-label">${esc(g.segment_label)}</span>
+                <span class="seg-count">${n.toLocaleString()} customer${n !== 1 ? 's' : ''}</span>
               </div>
-              <div class="seg-meaning">${esc(g.meaning)}</div>
+              <div class="seg-meaning">${esc(g.segment_meaning)}</div>
               <div class="seg-bar-track"><div class="seg-bar" style="width:${pct}%"></div></div>
               <div class="seg-row">
-                <span class="seg-value">${fmtRM(g.total)}</span>
-                <span class="seg-action">→ ${esc(g.action)}</span>
+                <span class="seg-value">${fmtRM(g.total_value)}</span>
+                <span class="seg-action">→ ${esc(g.segment_action)}</span>
               </div>
             </div>`;
           }).join('')
         : '<p class="empty-state">No segment data yet.</p>';
 
     } else {
-      /* RFM view */
+      /* v_rfm_counts is already aggregated — avg_score and total_value pre-computed */
       const RFM = {
         vip:            { label: 'VIP',            color: '#C08D5D', desc: 'Frequent, high-spend, recent visitors' },
         loyal:          { label: 'Loyal',          color: '#4a7c59', desc: 'Strong across frequency, spend & recency' },
@@ -1068,35 +1111,25 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
       };
       const ORDER = ['vip','loyal','needs_nudge','win_back','sleeping_giant','low_value'];
 
-      const groups = {};
-      segRfm.forEach(c => {
-        const seg = c.rfm_segment || 'low_value';
-        if (!groups[seg]) groups[seg] = { seg, count: 0, total: 0, scores: [] };
-        groups[seg].count++;
-        groups[seg].total += (c.total_spent || 0);
-        groups[seg].scores.push(c.rfm_score || 0);
-      });
-
       const sorted = ORDER
-        .filter(s => groups[s])
-        .map(s => groups[s]);
+        .map(s => rfmCounts.find(r => r.rfm_segment === s))
+        .filter(Boolean);
 
       container.innerHTML = sorted.length
         ? sorted.map(g => {
-            const meta     = RFM[g.seg] || { label: g.seg, color: '#9ca3af', desc: '' };
-            const avgScore = g.scores.length
-              ? Math.round(g.scores.reduce((s, v) => s + v, 0) / g.scores.length) : 0;
+            const meta = RFM[g.rfm_segment] || { label: g.rfm_segment, color: '#9ca3af', desc: '' };
+            const n    = Number(g.customers);
             return `<div class="seg-card">
               <div class="seg-row">
                 <span class="seg-label" style="color:${meta.color}">
                   <span class="rfm-dot" style="background:${meta.color}"></span>${esc(meta.label)}
                 </span>
-                <span class="seg-count">${g.count} customer${g.count !== 1 ? 's' : ''}</span>
+                <span class="seg-count">${n.toLocaleString()} customer${n !== 1 ? 's' : ''}</span>
               </div>
               <div class="seg-meaning">${esc(meta.desc)}</div>
               <div class="seg-row">
-                <span class="seg-value">${fmtRM(g.total)}</span>
-                <span class="rfm-score">avg ${avgScore}/100</span>
+                <span class="seg-value">${fmtRM(g.total_value)}</span>
+                <span class="rfm-score">avg ${g.avg_score}/100</span>
               </div>
             </div>`;
           }).join('')
@@ -1106,51 +1139,50 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
   /* ── Leads table ───────────────────────────────────── */
   function renderLeads() {
-    let rows = [...leads];
-
-    if (leadsFilter === 'bookers') {
-      rows = rows.filter(l => l.lead_type === 'customer + booker');
-    } else if (leadsFilter === 'walkins') {
-      rows = rows.filter(l => l.lead_type === 'customer (walk-in)');
-    } else if (leadsFilter === 'hot') {
-      rows = rows.filter(l => l.lead_type === 'booked, no StoreHub match');
-    }
-
-    rows.sort((a, b) => {
-      let va = a[sortCol], vb = b[sortCol];
-      if (va == null) va = sortAsc ?  Infinity : -Infinity;
-      if (vb == null) vb = sortAsc ?  Infinity : -Infinity;
-      if (va < vb) return sortAsc ? -1 :  1;
-      if (va > vb) return sortAsc ?  1 : -1;
-      return 0;
-    });
-
     const tbody = document.getElementById('leads-tbody');
-    if (!rows.length) {
+
+    if (!leads.length) {
       tbody.innerHTML = `<tr><td colspan="7" class="empty-td">No records match this filter.</td></tr>`;
-      return;
+    } else {
+      tbody.innerHTML = leads.map(l => {
+        const isHot    = l.lead_type === 'booked, no StoreHub match';
+        const tagColor = {
+          'customer + booker':         '#4a7c59',
+          'customer (walk-in)':        '#3a7abf',
+          'booked, no StoreHub match': '#d97706',
+        }[l.lead_type] || '#9ca3af';
+
+        return `<tr class="${isHot ? 'hot-row' : ''}">
+          <td>${esc(l.name || '—')}</td>
+          <td class="mono">${esc(l.phone_e164 || '—')}</td>
+          <td class="num">${fmtRM(l.total_spent)}</td>
+          <td class="num">${l.total_visits || 0}</td>
+          <td>${fmtDate(l.last_visit)}</td>
+          <td class="num">${l.total_bookings || 0}</td>
+          <td><span class="lead-tag" style="background:${tagColor}22;color:${tagColor};border:1px solid ${tagColor}44">
+            ${esc(l.lead_type || '—')}
+          </span></td>
+        </tr>`;
+      }).join('');
     }
 
-    tbody.innerHTML = rows.map(l => {
-      const isHot = l.lead_type === 'booked, no StoreHub match';
-      const tagColor = {
-        'customer + booker':        '#4a7c59',
-        'customer (walk-in)':       '#3a7abf',
-        'booked, no StoreHub match':'#d97706',
-      }[l.lead_type] || '#9ca3af';
+    /* Pagination controls */
+    const totalPages = Math.ceil(leadsTotal / PAGE_SIZE) || 1;
+    const start      = leadsPage * PAGE_SIZE + 1;
+    const end        = Math.min(start + leads.length - 1, leadsTotal);
+    document.getElementById('leads-page-info').textContent =
+      `${start}–${end} of ${leadsTotal.toLocaleString()}`;
+    document.getElementById('leads-prev').disabled = leadsPage === 0;
+    document.getElementById('leads-next').disabled = leadsPage >= totalPages - 1;
+  }
 
-      return `<tr class="${isHot ? 'hot-row' : ''}">
-        <td>${esc(l.name || '—')}</td>
-        <td class="mono">${esc(l.phone_e164 || '—')}</td>
-        <td class="num">${fmtRM(l.total_spent)}</td>
-        <td class="num">${l.total_visits || 0}</td>
-        <td>${fmtDate(l.last_visit)}</td>
-        <td class="num">${l.total_bookings || 0}</td>
-        <td><span class="lead-tag" style="background:${tagColor}22;color:${tagColor};border:1px solid ${tagColor}44">
-          ${esc(l.lead_type || '—')}
-        </span></td>
-      </tr>`;
-    }).join('');
+  async function goLeadsPage(delta) {
+    leadsPage = Math.max(0, leadsPage + delta);
+    const r = await fetchLeadsPage(leadsPage);
+    if (r.error) { showError(`v_leads: ${r.error.message}`); return; }
+    leads      = r.data || [];
+    leadsTotal = r.count ?? leadsTotal;
+    renderLeads();
   }
 
   /* ── Acquisition note ──────────────────────────────── */
@@ -1240,33 +1272,49 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
       renderSegments();
     });
 
-    /* Leads filter */
+    /* Leads filter — reset to page 0, re-fetch server-side */
     document.getElementById('leads-filter-strip')
-      .addEventListener('click', e => {
+      .addEventListener('click', async e => {
         const btn = e.target.closest('[data-filter]');
         if (!btn) return;
         leadsFilter = btn.dataset.filter;
+        leadsPage   = 0;
         document.querySelectorAll('.lf-btn')
           .forEach(b => b.classList.toggle('active', b === btn));
+        const r = await fetchLeadsPage(0);
+        if (r.error) { showError(`v_leads: ${r.error.message}`); return; }
+        leads      = r.data || [];
+        leadsTotal = r.count ?? 0;
         renderLeads();
       });
 
-    /* Table sort */
+    /* Table sort — reset to page 0, re-fetch server-side */
     document.querySelector('#leads-table thead')
-      .addEventListener('click', e => {
+      .addEventListener('click', async e => {
         const th = e.target.closest('th[data-col]');
         if (!th) return;
         const col = th.dataset.col;
         if (sortCol === col) { sortAsc = !sortAsc; }
         else { sortCol = col; sortAsc = false; }
+        leadsPage = 0;
         document.querySelectorAll('#leads-table th')
           .forEach(h => {
             h.classList.remove('sorted-asc', 'sorted-desc');
             if (h.dataset.col === sortCol)
               h.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
           });
+        const r = await fetchLeadsPage(0);
+        if (r.error) { showError(`v_leads: ${r.error.message}`); return; }
+        leads      = r.data || [];
+        leadsTotal = r.count ?? leadsTotal;
         renderLeads();
       });
+
+    /* Leads pagination */
+    document.getElementById('leads-prev')
+      .addEventListener('click', () => goLeadsPage(-1));
+    document.getElementById('leads-next')
+      .addEventListener('click', () => goLeadsPage(1));
 
     /* Boot auth */
     initAuth();
