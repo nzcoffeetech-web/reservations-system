@@ -1,0 +1,1280 @@
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NZ Coffee Intelligence</title>
+  <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #faf6ef;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── Login ─────────────────────────────────────────── */
+    #login-view {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #faf6ef;
+      padding: 1rem;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 32px rgba(160,120,60,0.10);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .nz-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #1a1201;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem;
+      color: #C08D5D;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      flex-shrink: 0;
+    }
+    .login-card .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      color: #1a1a1a;
+      text-align: center;
+    }
+    .login-card .brand-tagline {
+      font-size: 0.8rem;
+      color: #9a8c7a;
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    .login-form input[type="email"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid #e8dfc8;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      background: #faf6ef;
+      color: #1a1a1a;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .login-form input[type="email"]:focus {
+      border-color: #C08D5D;
+    }
+    .login-form button {
+      padding: 0.75rem 1rem;
+      background: #C08D5D;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .login-form button:hover { background: #a87848; }
+    .login-form button:disabled { background: #d4b899; cursor: default; }
+    .login-status {
+      font-size: 0.85rem;
+      color: #4a7c59;
+      text-align: center;
+      min-height: 1.2em;
+    }
+    .login-status.error { color: #dc2626; }
+
+    /* ── Header ────────────────────────────────────────── */
+    .dash-header {
+      background: #1a1201;
+      color: #f5f0e8;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+    .nz-badge-sm {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #2d2000;
+      border: 1px solid #C08D5D;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 0.85rem;
+      color: #C08D5D;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .brand-title-sm {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      color: #f5f0e8;
+      line-height: 1.2;
+    }
+    .brand-tagline {
+      font-size: 0.7rem;
+      color: #9a8c6a;
+      letter-spacing: 0.04em;
+    }
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .df-btn {
+      padding: 0.3rem 0.7rem;
+      border: 1px solid #4a3a1a;
+      background: transparent;
+      color: #b8a888;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .df-btn:hover { border-color: #C08D5D; color: #e8d8b8; }
+    .df-btn.active { background: #C08D5D; border-color: #C08D5D; color: #1a1201; font-weight: 600; }
+    .header-actions .icon-btn {
+      padding: 0.3rem 0.7rem;
+      border: 1px solid #4a3a1a;
+      background: transparent;
+      color: #b8a888;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .header-actions .icon-btn:hover { border-color: #C08D5D; color: #e8d8b8; }
+    .signout-btn {
+      padding: 0.3rem 0.8rem;
+      border: 1px solid #6b2020;
+      background: transparent;
+      color: #c88888;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .signout-btn:hover { background: #6b2020; color: #fff; }
+    .custom-date-row {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.5rem 1.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .custom-date-row label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #b8a888;
+    }
+    .custom-date-row input[type="date"] {
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #4a3a1a;
+      background: #2d2000;
+      color: #f5f0e8;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+    }
+    .custom-date-row button {
+      padding: 0.25rem 0.75rem;
+      background: #C08D5D;
+      color: #1a1201;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── Error banner ──────────────────────────────────── */
+    .error-banner {
+      background: #fef2f2;
+      border-bottom: 2px solid #fca5a5;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .error-banner span {
+      color: #dc2626;
+      font-size: 0.85rem;
+      flex: 1;
+    }
+    .error-banner button {
+      padding: 0.3rem 0.75rem;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ───────────────────────────────────── */
+    .dash-main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── KPI strip ─────────────────────────────────────── */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .kpi-strip { grid-template-columns: 1fr; } }
+    .kpi-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.25rem 1.25rem 1rem;
+      box-shadow: 0 2px 12px rgba(160,120,60,0.07);
+      border-left: 3px solid #C08D5D;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .kpi-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1a1201;
+      line-height: 1;
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9a8c7a;
+    }
+    .kpi-meaning {
+      font-size: 0.82rem;
+      color: #5a5040;
+      margin-top: 0.2rem;
+    }
+
+    /* ── Pillars ───────────────────────────────────────── */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.3fr;
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) { .pillars-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px)  { .pillars-grid { grid-template-columns: 1fr; } }
+    .pillar {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 12px rgba(160,120,60,0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .pillar-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .pillar-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: #1a1201;
+    }
+    .badge-tag {
+      font-size: 0.68rem;
+      background: #f0e8d8;
+      color: #9a7040;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .badge-tag.period { background: #e8f0f8; color: #3a5a80; }
+
+    /* ── Trend pillar ──────────────────────────────────── */
+    .trend-summary {
+      font-size: 0.88rem;
+      color: #3a3020;
+      background: #f5f0e0;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      line-height: 1.5;
+    }
+    .trend-cancel {
+      font-size: 0.82rem;
+      color: #7a6050;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 200px;
+    }
+
+    /* ── Segments pillar ───────────────────────────────── */
+    .seg-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .seg-tab {
+      padding: 0.25rem 0.7rem;
+      border: 1.5px solid #e8dfc8;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: transparent;
+      color: #7a6a50;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .seg-tab:hover { border-color: #C08D5D; color: #8b5a2a; }
+    .seg-tab.active { background: #C08D5D; border-color: #C08D5D; color: #fff; font-weight: 600; }
+    .seg-cards { display: flex; flex-direction: column; gap: 0.6rem; }
+    .seg-card {
+      border: 1px solid #f0e8d8;
+      border-radius: 7px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .seg-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+    .seg-label { font-weight: 600; font-size: 0.88rem; color: #1a1201; }
+    .seg-count { font-size: 0.78rem; color: #9a8c7a; }
+    .seg-meaning { font-size: 0.78rem; color: #6a5a40; font-style: italic; }
+    .seg-bar-track { background: #f0e8d8; border-radius: 3px; height: 5px; margin: 0.1rem 0; }
+    .seg-bar { background: #C08D5D; border-radius: 3px; height: 5px; transition: width 0.4s; }
+    .seg-value { font-size: 0.82rem; font-weight: 600; color: #4a3010; }
+    .seg-action { font-size: 0.78rem; color: #C08D5D; font-weight: 500; }
+    /* RFM variant */
+    .rfm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .rfm-score { font-size: 0.75rem; color: #9a8c7a; }
+
+    /* ── Leads pillar ──────────────────────────────────── */
+    .leads-filter-row {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .lf-btn {
+      padding: 0.28rem 0.65rem;
+      border: 1.5px solid #e8dfc8;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      background: transparent;
+      color: #7a6a50;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .lf-btn:hover { border-color: #C08D5D; color: #8b5a2a; }
+    .lf-btn.active { background: #C08D5D; border-color: #C08D5D; color: #fff; font-weight: 600; }
+    .lf-btn.hot { border-color: #f59e0b; color: #92400e; }
+    .lf-btn.hot.active { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.6rem;
+      border-bottom: 2px solid #e8dfc8;
+      color: #7a6a50;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+    th:hover { color: #C08D5D; }
+    th.sorted-asc::after  { content: ' ↑'; color: #C08D5D; }
+    th.sorted-desc::after { content: ' ↓'; color: #C08D5D; }
+    td {
+      padding: 0.45rem 0.6rem;
+      border-bottom: 1px solid #f5f0e8;
+      color: #2a2010;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #faf6ef; }
+    .hot-row td { background: #fffbeb !important; }
+    .hot-row:hover td { background: #fef3c7 !important; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.mono { font-family: 'Courier New', monospace; font-size: 0.8rem; }
+    .lead-tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+    .empty-td { text-align: center; color: #9a8c7a; padding: 1.5rem; }
+
+    /* ── Acquisition note ──────────────────────────────── */
+    .acq-note {
+      font-size: 0.82rem;
+      color: #7a6a50;
+      background: #f5f0e8;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+    }
+
+    /* ── Misc ──────────────────────────────────────────── */
+    .empty-state {
+      color: #9a8c7a;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ LOGIN VIEW ═══════════════════════════ -->
+<div id="login-view">
+  <div class="login-card">
+    <div class="nz-badge">NZ</div>
+    <h1 class="brand-title">NZ Coffee Intelligence</h1>
+    <p class="brand-tagline">The taste you never forget</p>
+    <div class="login-form">
+      <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email" />
+      <button id="magic-link-btn">Send magic link</button>
+    </div>
+    <p id="login-status" class="login-status"></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DASHBOARD VIEW ═══════════════════════ -->
+<div id="dashboard-view" style="display:none">
+
+  <!-- Header -->
+  <header class="dash-header">
+    <div class="header-inner">
+      <div class="brand-row">
+        <div class="nz-badge-sm">NZ</div>
+        <div>
+          <div class="brand-title-sm">NZ Coffee Intelligence</div>
+          <div class="brand-tagline">The taste you never forget</div>
+        </div>
+      </div>
+      <div class="header-actions" id="date-filter-strip">
+        <button class="df-btn active" data-mode="month">This Month</button>
+        <button class="df-btn" data-mode="prevmonth">Prev Month</button>
+        <button class="df-btn" data-mode="90d">Last 90d</button>
+        <button class="df-btn" data-mode="all">All Time</button>
+        <button class="df-btn" data-mode="custom">Custom…</button>
+        <button class="icon-btn" id="refresh-hdr-btn">↺ Refresh</button>
+        <button class="signout-btn" id="signout-btn">Sign out</button>
+      </div>
+    </div>
+    <div class="custom-date-row" id="custom-date-row" style="display:none">
+      <label>From <input type="date" id="date-from" /></label>
+      <label>To <input type="date" id="date-to" /></label>
+      <button id="apply-custom-btn">Apply</button>
+    </div>
+  </header>
+
+  <!-- Error banner -->
+  <div id="error-banner" class="error-banner" style="display:none">
+    <span id="error-msg"></span>
+    <button id="refresh-err-btn">Refresh data</button>
+  </div>
+
+  <main class="dash-main">
+
+    <!-- KPI strip -->
+    <section class="kpi-strip">
+      <div class="kpi-card" id="kpi-customers">
+        <div class="kpi-num">—</div>
+        <div class="kpi-label">Total customers</div>
+        <div class="kpi-meaning">Loading…</div>
+      </div>
+      <div class="kpi-card" id="kpi-signal">
+        <div class="kpi-num">—</div>
+        <div class="kpi-label">Online vs walk-in spend</div>
+        <div class="kpi-meaning">Loading…</div>
+      </div>
+      <div class="kpi-card" id="kpi-revenue">
+        <div class="kpi-num">—</div>
+        <div class="kpi-label">Lifetime revenue</div>
+        <div class="kpi-meaning">Loading…</div>
+      </div>
+      <div class="kpi-card" id="kpi-bookings">
+        <div class="kpi-num">—</div>
+        <div class="kpi-label">Confirmed bookings</div>
+        <div class="kpi-meaning">Loading…</div>
+      </div>
+    </section>
+
+    <!-- Three pillars -->
+    <div class="pillars-grid">
+
+      <!-- Pillar 1: Booking trends -->
+      <section class="pillar">
+        <div class="pillar-header">
+          <h2>Booking Trends</h2>
+          <span class="badge-tag period">Date filter applies</span>
+        </div>
+        <div id="trend-summary" class="trend-summary">Loading…</div>
+        <div id="trend-cancel" class="trend-cancel"></div>
+        <div class="chart-wrap">
+          <canvas id="trend-chart"></canvas>
+        </div>
+      </section>
+
+      <!-- Pillar 2: Segments -->
+      <section class="pillar">
+        <div class="pillar-header">
+          <h2>Customer Segments</h2>
+          <span class="badge-tag">All-time snapshot</span>
+        </div>
+        <div class="seg-tabs">
+          <button class="seg-tab active" id="tab-plain">Plain English</button>
+          <button class="seg-tab" id="tab-rfm">Technical detail</button>
+        </div>
+        <div id="segments-container" class="seg-cards"></div>
+      </section>
+
+      <!-- Pillar 3: Leads list -->
+      <section class="pillar">
+        <div class="pillar-header">
+          <h2>Customers &amp; Leads</h2>
+          <span class="badge-tag">All-time</span>
+        </div>
+        <div class="leads-filter-row" id="leads-filter-strip">
+          <button class="lf-btn active" data-filter="all">All</button>
+          <button class="lf-btn" data-filter="bookers">Customers who book</button>
+          <button class="lf-btn" data-filter="walkins">Walk-ins</button>
+          <button class="lf-btn hot" data-filter="hot">🔥 Hot leads</button>
+        </div>
+        <div class="table-wrap">
+          <table id="leads-table">
+            <thead>
+              <tr>
+                <th data-col="name">Name</th>
+                <th data-col="phone_e164">Phone</th>
+                <th data-col="total_spent" class="sorted-desc">Spend</th>
+                <th data-col="total_visits">Visits</th>
+                <th data-col="last_visit">Last visit</th>
+                <th data-col="total_bookings">Bookings</th>
+                <th data-col="lead_type">Type</th>
+              </tr>
+            </thead>
+            <tbody id="leads-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Acquisition note -->
+    <div id="acq-note" class="acq-note">Loading acquisition data…</div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════ SCRIPT ═══════════════════════════════ -->
+<script is:inline>
+(function () {
+  /* ── Config ─────────────────────────────────────────── */
+  const SUPA_URL  = 'https://vjtvuhtyilxnepqtppoq.supabase.co';
+  const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqdHZ1aHR5aWx4bmVwcXRwcG9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMDIzMTIsImV4cCI6MjA4NDU3ODMxMn0.hIHr6XZfwRwPVHYSfkYvvtpQ5YfMnqW8sVeWyGWvK4o';
+  const ALLOWED   = ['nzcoffee.tech@gmail.com', 'nzcoffeeco@gmail.com'];
+
+  /* ── State ──────────────────────────────────────────── */
+  let leads       = [];
+  let segPlain    = [];
+  let segRfm      = [];
+  let bookings    = [];
+  let dateMode    = 'month';
+  let customFrom  = null;
+  let customTo    = null;
+  let segView     = 'plain';
+  let leadsFilter = 'all';
+  let sortCol     = 'total_spent';
+  let sortAsc     = false;
+  let trendChart  = null;
+
+  /* ── Supabase client ────────────────────────────────── */
+  const { createClient } = window.supabase;
+  const db = createClient(SUPA_URL, SUPA_KEY);
+
+  /* ══════════════════════════════════════════════════════
+     AUTH — the ONLY code path that reveals the dashboard
+     is a resolved, whitelisted session object.
+  ══════════════════════════════════════════════════════ */
+  async function initAuth() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) revealDashboard(session);
+
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session !== null) {
+        revealDashboard(session);
+      }
+      if (event === 'SIGNED_OUT') {
+        showLogin();
+      }
+    });
+  }
+
+  function revealDashboard(session) {
+    if (!session || !session.user) { showLogin(); return; }
+    if (!ALLOWED.includes(session.user.email)) {
+      db.auth.signOut();
+      setLoginMsg('Not authorised for this dashboard.', true);
+      return;
+    }
+    document.getElementById('login-view').style.display    = 'none';
+    document.getElementById('dashboard-view').style.display = 'block';
+    loadData();
+  }
+
+  function showLogin() {
+    document.getElementById('login-view').style.display    = 'flex';
+    document.getElementById('dashboard-view').style.display = 'none';
+  }
+
+  async function sendMagicLink() {
+    const emailEl = document.getElementById('email-input');
+    const email   = emailEl.value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLoginMsg('Enter a valid email address.', true);
+      return;
+    }
+    const btn = document.getElementById('magic-link-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Sending…';
+    const { error } = await db.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: 'https://nzcoffee.work/dashboard' }
+    });
+    btn.disabled    = false;
+    btn.textContent = 'Send magic link';
+    if (error) { setLoginMsg(error.message, true); return; }
+    setLoginMsg('Check your inbox — magic link sent.');
+  }
+
+  function setLoginMsg(msg, isErr = false) {
+    const el = document.getElementById('login-status');
+    el.textContent = msg;
+    el.className   = 'login-status' + (isErr ? ' error' : '');
+  }
+
+  async function handleSignOut() {
+    await db.auth.signOut();
+  }
+
+  /* ══════════════════════════════════════════════════════
+     DATA
+  ══════════════════════════════════════════════════════ */
+  async function loadData() {
+    hideError();
+
+    const [r0, r1, r2, r3] = await Promise.all([
+      db.from('v_leads').select('*'),
+      db.from('v_segments_plain').select('*'),
+      db.from('v_segments_rfm').select('*'),
+      db.from('calendly_bookings').select('*'),
+    ]);
+
+    const errs = [
+      r0.error && `v_leads: ${r0.error.message}`,
+      r1.error && `v_segments_plain: ${r1.error.message}`,
+      r2.error && `v_segments_rfm: ${r2.error.message}`,
+      r3.error && `calendly_bookings: ${r3.error.message}`,
+    ].filter(Boolean);
+
+    if (errs.length) showError(errs.join(' | '));
+
+    leads    = r0.data || [];
+    segPlain = r1.data || [];
+    segRfm   = r2.data || [];
+    bookings = r3.data || [];
+
+    render();
+  }
+
+  function showError(msg) {
+    document.getElementById('error-banner').style.display = 'flex';
+    document.getElementById('error-msg').textContent      = msg;
+  }
+  function hideError() {
+    document.getElementById('error-banner').style.display = 'none';
+  }
+
+  /* ══════════════════════════════════════════════════════
+     DATE HELPERS
+  ══════════════════════════════════════════════════════ */
+  function getDateRange() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateMode === 'month') {
+      return { from: new Date(today.getFullYear(), today.getMonth(), 1),
+               to:   new Date(today.getFullYear(), today.getMonth() + 1, 0) };
+    }
+    if (dateMode === 'prevmonth') {
+      return { from: new Date(today.getFullYear(), today.getMonth() - 1, 1),
+               to:   new Date(today.getFullYear(), today.getMonth(), 0) };
+    }
+    if (dateMode === '90d') {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 90);
+      return { from, to: today };
+    }
+    if (dateMode === 'custom' && customFrom && customTo) {
+      return { from: new Date(customFrom), to: new Date(customTo + 'T23:59:59') };
+    }
+    return { from: null, to: null };
+  }
+
+  /* Robustly read booking date regardless of column name */
+  function bookingDate(b) {
+    if (!b.event_start) return null;
+    const d = new Date(b.event_start);
+    return isNaN(d) ? null : d;
+  }
+
+  function isCanceled(b) {
+    return b.canceled === true;
+  }
+
+  function bookingPax(b) {
+    return b.pax == null ? 0 : Number(b.pax);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     FORMAT HELPERS
+  ══════════════════════════════════════════════════════ */
+  function fmtRM(n) {
+    return 'RM ' + Number(n || 0).toLocaleString('en-MY', { maximumFractionDigits: 0 });
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    const dt = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(dt)) return '—';
+    return dt.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function fmtMonth(key) {
+    const [y, m] = key.split('-');
+    return new Date(+y, +m - 1, 1)
+      .toLocaleDateString('en-MY', { month: 'short', year: '2-digit' });
+  }
+
+  /* ══════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════ */
+  function render() {
+    renderKPI();
+    renderTrend();
+    renderSegments();
+    renderLeads();
+    renderAcquisition();
+  }
+
+  /* ── KPI ───────────────────────────────────────────── */
+  function setKPI(id, num, label, meaning) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelector('.kpi-num').textContent    = num;
+    el.querySelector('.kpi-label').textContent  = label;
+    el.querySelector('.kpi-meaning').textContent = meaning;
+  }
+
+  function renderKPI() {
+    /* 1. Total customers */
+    setKPI('kpi-customers',
+      leads.length.toLocaleString(),
+      'Total customers',
+      `${leads.length} people in your database`);
+
+    /* 2. Booking value signal */
+    const bookers = leads.filter(l => l.lead_type === 'customer + booker');
+    const walkins = leads.filter(l => l.lead_type === 'customer (walk-in)');
+    const avgB = bookers.length
+      ? bookers.reduce((s, l) => s + (l.total_spent || 0), 0) / bookers.length : 0;
+    const avgW = walkins.length
+      ? walkins.reduce((s, l) => s + (l.total_spent || 0), 0) / walkins.length : 0;
+
+    if (avgB > 0 && avgW > 0) {
+      const mult = (avgB / avgW).toFixed(1);
+      setKPI('kpi-signal', `${mult}×`,
+        'Online booker vs walk-in',
+        `Customers who book online spend ${mult}× more than walk-ins`);
+    } else if (avgB > 0) {
+      setKPI('kpi-signal', fmtRM(avgB), 'Avg online booker spend',
+        `Average across ${bookers.length} booking customers`);
+    } else {
+      setKPI('kpi-signal', '—', 'Online vs walk-in spend',
+        'Need both booker + walk-in data to compare');
+    }
+
+    /* 3. Lifetime revenue */
+    const total = leads.reduce((s, l) => s + (l.total_spent || 0), 0);
+    setKPI('kpi-revenue', fmtRM(total), 'Lifetime revenue',
+      `All-time spend across ${leads.length} customers`);
+
+    /* 4. Confirmed bookings (date-filtered) */
+    const range = getDateRange();
+    const confirmed = bookings.filter(b => {
+      if (isCanceled(b)) return false;
+      const d = bookingDate(b);
+      if (!d) return false;
+      if (range.from && d < range.from) return false;
+      if (range.to   && d > range.to)   return false;
+      return true;
+    });
+    const periodLabel = { month: 'this month', prevmonth: 'last month',
+      '90d': 'last 90 days', all: 'all time', custom: 'selected range' }[dateMode] || 'this period';
+    setKPI('kpi-bookings', confirmed.length.toString(), 'Confirmed bookings',
+      `Bookings that went ahead — ${periodLabel}`);
+  }
+
+  /* ── Trend ─────────────────────────────────────────── */
+  function renderTrend() {
+    const confirmed = bookings.filter(b => !isCanceled(b));
+
+    /* group by YYYY-MM */
+    const byMonth = {};
+    confirmed.forEach(b => {
+      const d = bookingDate(b);
+      if (!d) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!byMonth[key]) byMonth[key] = { count: 0, pax: 0 };
+      byMonth[key].count++;
+      byMonth[key].pax += bookingPax(b);
+    });
+
+    const keys    = Object.keys(byMonth).sort();
+    const last12  = keys.slice(-12);
+
+    /* trend sentence */
+    const summaryEl = document.getElementById('trend-summary');
+    if (keys.length >= 6) {
+      const r = keys.slice(-4, -1);   /* last 3 complete months */
+      const p = keys.slice(-7, -4);
+      if (r.length === 3 && p.length === 3) {
+        const rAvg = r.reduce((s, k) => s + byMonth[k].count, 0) / 3;
+        const pAvg = p.reduce((s, k) => s + byMonth[k].count, 0) / 3;
+        if (pAvg > 0) {
+          const pct = Math.round(((rAvg - pAvg) / pAvg) * 100);
+          const dir = pct >= 0 ? 'up' : 'down';
+          summaryEl.textContent =
+            `Bookings are ${dir} ${Math.abs(pct)}% vs the previous 3-month average ` +
+            `(${Math.round(rAvg)} vs ${Math.round(pAvg)} per month).`;
+        } else {
+          summaryEl.textContent = `${confirmed.length} confirmed bookings on record.`;
+        }
+      }
+    } else if (keys.length > 0) {
+      summaryEl.textContent = `${confirmed.length} confirmed bookings across ${keys.length} month${keys.length > 1 ? 's' : ''} of data.`;
+    } else {
+      summaryEl.textContent = 'No booking data available yet.';
+    }
+
+    /* cancellation rate */
+    if (bookings.length > 0) {
+      const nCanceled = bookings.filter(b => isCanceled(b)).length;
+      const rate      = Math.round((nCanceled / bookings.length) * 100);
+      document.getElementById('trend-cancel').textContent =
+        `${rate}% of all bookings get cancelled (all-time rate).`;
+    }
+
+    /* chart */
+    const labels    = last12.map(fmtMonth);
+    const counts    = last12.map(k => byMonth[k].count);
+    const paxVals   = last12.map(k => byMonth[k].pax);
+    const realPax   = paxVals.some(p => p > counts[paxVals.indexOf(p)] + 1);
+
+    if (trendChart) { trendChart.destroy(); trendChart = null; }
+
+    const ctx = document.getElementById('trend-chart').getContext('2d');
+    const datasets = [{
+      type: 'bar',
+      label: 'Bookings',
+      data: counts,
+      backgroundColor: 'rgba(192,141,93,0.75)',
+      borderColor: '#C08D5D',
+      borderWidth: 1,
+      borderRadius: 3,
+      yAxisID: 'y',
+    }];
+
+    if (realPax) {
+      datasets.push({
+        type: 'line',
+        label: 'Pax',
+        data: paxVals,
+        borderColor: '#5a3010',
+        backgroundColor: 'transparent',
+        tension: 0.35,
+        pointRadius: 3,
+        pointBackgroundColor: '#5a3010',
+        yAxisID: 'y1',
+      });
+    }
+
+    trendChart = new Chart(ctx, {
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: realPax, labels: { font: { family: 'Inter', size: 11 } } },
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            ticks: { stepSize: 1, font: { family: 'Inter', size: 10 } },
+            title: { display: false },
+          },
+          ...(realPax ? {
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+              grid: { drawOnChartArea: false },
+              ticks: { font: { family: 'Inter', size: 10 } },
+            }
+          } : {}),
+          x: { ticks: { font: { family: 'Inter', size: 10 } } }
+        }
+      }
+    });
+  }
+
+  /* ── Segments ──────────────────────────────────────── */
+  function renderSegments() {
+    const container = document.getElementById('segments-container');
+    if (segView === 'plain') {
+      /* aggregate by segment_label */
+      const groups = {};
+      segPlain.forEach(c => {
+        const lbl = c.segment_label || 'Unknown';
+        if (!groups[lbl]) groups[lbl] = {
+          label: lbl, meaning: c.segment_meaning || '', action: c.segment_action || '',
+          count: 0, total: 0
+        };
+        groups[lbl].count++;
+        groups[lbl].total += (c.total_spent || 0);
+      });
+
+      const sorted  = Object.values(groups).sort((a, b) => b.total - a.total);
+      const maxTot  = sorted.length ? sorted[0].total : 1;
+
+      container.innerHTML = sorted.length
+        ? sorted.map(g => {
+            const pct = maxTot > 0 ? Math.round((g.total / maxTot) * 100) : 0;
+            return `<div class="seg-card">
+              <div class="seg-row">
+                <span class="seg-label">${esc(g.label)}</span>
+                <span class="seg-count">${g.count} customer${g.count !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="seg-meaning">${esc(g.meaning)}</div>
+              <div class="seg-bar-track"><div class="seg-bar" style="width:${pct}%"></div></div>
+              <div class="seg-row">
+                <span class="seg-value">${fmtRM(g.total)}</span>
+                <span class="seg-action">→ ${esc(g.action)}</span>
+              </div>
+            </div>`;
+          }).join('')
+        : '<p class="empty-state">No segment data yet.</p>';
+
+    } else {
+      /* RFM view */
+      const RFM = {
+        vip:            { label: 'VIP',            color: '#C08D5D', desc: 'Frequent, high-spend, recent visitors' },
+        loyal:          { label: 'Loyal',          color: '#4a7c59', desc: 'Strong across frequency, spend & recency' },
+        needs_nudge:    { label: 'Needs a nudge',  color: '#3a7abf', desc: 'Decent scores — just needs a reason to return' },
+        win_back:       { label: 'Win back',       color: '#d97706', desc: 'Good historical spend, quiet for 6+ months' },
+        sleeping_giant: { label: 'Sleeping giant', color: '#7c3aed', desc: 'Absent for over a year' },
+        low_value:      { label: 'Low value',      color: '#9ca3af', desc: 'Low scores across the board' },
+      };
+      const ORDER = ['vip','loyal','needs_nudge','win_back','sleeping_giant','low_value'];
+
+      const groups = {};
+      segRfm.forEach(c => {
+        const seg = c.rfm_segment || 'low_value';
+        if (!groups[seg]) groups[seg] = { seg, count: 0, total: 0, scores: [] };
+        groups[seg].count++;
+        groups[seg].total += (c.total_spent || 0);
+        groups[seg].scores.push(c.rfm_score || 0);
+      });
+
+      const sorted = ORDER
+        .filter(s => groups[s])
+        .map(s => groups[s]);
+
+      container.innerHTML = sorted.length
+        ? sorted.map(g => {
+            const meta     = RFM[g.seg] || { label: g.seg, color: '#9ca3af', desc: '' };
+            const avgScore = g.scores.length
+              ? Math.round(g.scores.reduce((s, v) => s + v, 0) / g.scores.length) : 0;
+            return `<div class="seg-card">
+              <div class="seg-row">
+                <span class="seg-label" style="color:${meta.color}">
+                  <span class="rfm-dot" style="background:${meta.color}"></span>${esc(meta.label)}
+                </span>
+                <span class="seg-count">${g.count} customer${g.count !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="seg-meaning">${esc(meta.desc)}</div>
+              <div class="seg-row">
+                <span class="seg-value">${fmtRM(g.total)}</span>
+                <span class="rfm-score">avg ${avgScore}/100</span>
+              </div>
+            </div>`;
+          }).join('')
+        : '<p class="empty-state">No RFM data yet.</p>';
+    }
+  }
+
+  /* ── Leads table ───────────────────────────────────── */
+  function renderLeads() {
+    let rows = [...leads];
+
+    if (leadsFilter === 'bookers') {
+      rows = rows.filter(l => l.lead_type === 'customer + booker');
+    } else if (leadsFilter === 'walkins') {
+      rows = rows.filter(l => l.lead_type === 'customer (walk-in)');
+    } else if (leadsFilter === 'hot') {
+      rows = rows.filter(l => l.lead_type === 'booked, no StoreHub match');
+    }
+
+    rows.sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (va == null) va = sortAsc ?  Infinity : -Infinity;
+      if (vb == null) vb = sortAsc ?  Infinity : -Infinity;
+      if (va < vb) return sortAsc ? -1 :  1;
+      if (va > vb) return sortAsc ?  1 : -1;
+      return 0;
+    });
+
+    const tbody = document.getElementById('leads-tbody');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-td">No records match this filter.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(l => {
+      const isHot = l.lead_type === 'booked, no StoreHub match';
+      const tagColor = {
+        'customer + booker':        '#4a7c59',
+        'customer (walk-in)':       '#3a7abf',
+        'booked, no StoreHub match':'#d97706',
+      }[l.lead_type] || '#9ca3af';
+
+      return `<tr class="${isHot ? 'hot-row' : ''}">
+        <td>${esc(l.name || '—')}</td>
+        <td class="mono">${esc(l.phone_e164 || '—')}</td>
+        <td class="num">${fmtRM(l.total_spent)}</td>
+        <td class="num">${l.total_visits || 0}</td>
+        <td>${fmtDate(l.last_visit)}</td>
+        <td class="num">${l.total_bookings || 0}</td>
+        <td><span class="lead-tag" style="background:${tagColor}22;color:${tagColor};border:1px solid ${tagColor}44">
+          ${esc(l.lead_type || '—')}
+        </span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ── Acquisition note ──────────────────────────────── */
+  function renderAcquisition() {
+    const counts = {};
+    leads.forEach(l => {
+      const utm = (l.utm_source || '').trim().toLowerCase() || null;
+      if (utm) counts[utm] = (counts[utm] || 0) + 1;
+    });
+
+    const tagged   = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const untagged = leads.filter(l => !l.utm_source || !l.utm_source.trim()).length;
+    const total    = leads.length;
+
+    let msg;
+    if (tagged.length) {
+      const topStr = tagged.slice(0, 3)
+        .map(([k, v]) => `${v} from ${k}`).join(', ');
+      msg = `Acquisition: ${topStr}.` +
+        (untagged ? ` ${untagged} of ${total} customers had no UTM source tagged.` : '');
+    } else {
+      msg = `Acquisition: none of the ${total} customers have a UTM source tag — consider adding UTM links to your Instagram/ads.`;
+    }
+
+    document.getElementById('acq-note').textContent = msg;
+  }
+
+  /* ── XSS helper ────────────────────────────────────── */
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ══════════════════════════════════════════════════════
+     EVENT WIRING
+  ══════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+
+    /* Magic link submit */
+    document.getElementById('magic-link-btn')
+      .addEventListener('click', sendMagicLink);
+    document.getElementById('email-input')
+      .addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
+
+    /* Sign out */
+    document.getElementById('signout-btn')
+      .addEventListener('click', handleSignOut);
+
+    /* Refresh buttons */
+    document.getElementById('refresh-hdr-btn')
+      .addEventListener('click', loadData);
+    document.getElementById('refresh-err-btn')
+      .addEventListener('click', loadData);
+
+    /* Date filter */
+    document.getElementById('date-filter-strip')
+      .addEventListener('click', e => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        dateMode = btn.dataset.mode;
+        document.querySelectorAll('.df-btn')
+          .forEach(b => b.classList.toggle('active', b === btn));
+        const customRow = document.getElementById('custom-date-row');
+        customRow.style.display = dateMode === 'custom' ? 'flex' : 'none';
+        if (dateMode !== 'custom') render();
+      });
+
+    document.getElementById('apply-custom-btn')
+      .addEventListener('click', () => {
+        customFrom = document.getElementById('date-from').value;
+        customTo   = document.getElementById('date-to').value;
+        if (customFrom && customTo) render();
+      });
+
+    /* Segment tabs */
+    document.getElementById('tab-plain').addEventListener('click', () => {
+      segView = 'plain';
+      document.getElementById('tab-plain').classList.add('active');
+      document.getElementById('tab-rfm').classList.remove('active');
+      renderSegments();
+    });
+    document.getElementById('tab-rfm').addEventListener('click', () => {
+      segView = 'rfm';
+      document.getElementById('tab-rfm').classList.add('active');
+      document.getElementById('tab-plain').classList.remove('active');
+      renderSegments();
+    });
+
+    /* Leads filter */
+    document.getElementById('leads-filter-strip')
+      .addEventListener('click', e => {
+        const btn = e.target.closest('[data-filter]');
+        if (!btn) return;
+        leadsFilter = btn.dataset.filter;
+        document.querySelectorAll('.lf-btn')
+          .forEach(b => b.classList.toggle('active', b === btn));
+        renderLeads();
+      });
+
+    /* Table sort */
+    document.querySelector('#leads-table thead')
+      .addEventListener('click', e => {
+        const th = e.target.closest('th[data-col]');
+        if (!th) return;
+        const col = th.dataset.col;
+        if (sortCol === col) { sortAsc = !sortAsc; }
+        else { sortCol = col; sortAsc = false; }
+        document.querySelectorAll('#leads-table th')
+          .forEach(h => {
+            h.classList.remove('sorted-asc', 'sorted-desc');
+            if (h.dataset.col === sortCol)
+              h.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+          });
+        renderLeads();
+      });
+
+    /* Boot auth */
+    initAuth();
+  });
+
+})();
+</script>
+
+</body>
+</html>
