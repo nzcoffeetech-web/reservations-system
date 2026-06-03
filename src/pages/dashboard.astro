@@ -12,12 +12,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --bg:          #0a0a0b;
+      --surface:     #141416;
+      --surface-2:   #1c1c20;
+      --border:      #2a2a2e;
+      --text:        #f5f3ee;
+      --text-muted:  #8a8a92;
+      --accent:      #c8794a;
+      --accent-soft: rgba(200,121,74,0.15);
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: #faf6ef;
-      color: #1a1a1a;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
     }
 
@@ -27,16 +38,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #faf6ef;
+      background: var(--bg);
       padding: 1rem;
     }
     .login-card {
-      background: #fff;
-      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
       padding: 2.5rem 2rem;
       width: 100%;
       max-width: 400px;
-      box-shadow: 0 4px 32px rgba(160,120,60,0.10);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -46,13 +58,14 @@
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background: #1a1201;
+      background: var(--surface-2);
+      border: 1.5px solid var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Playfair Display', serif;
       font-size: 1.25rem;
-      color: #C08D5D;
+      color: var(--accent);
       font-weight: 600;
       margin-bottom: 0.5rem;
       flex-shrink: 0;
@@ -60,185 +73,259 @@
     .login-card .brand-title {
       font-family: 'Playfair Display', serif;
       font-size: 1.5rem;
-      color: #1a1a1a;
+      color: var(--text);
       text-align: center;
     }
     .login-card .brand-tagline {
       font-size: 0.8rem;
-      color: #9a8c7a;
+      color: var(--text-muted);
       text-align: center;
       letter-spacing: 0.05em;
       margin-bottom: 1rem;
     }
-    .login-form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      width: 100%;
-    }
+    .login-form { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; }
     .login-form input[type="email"] {
       width: 100%;
       padding: 0.75rem 1rem;
-      border: 1.5px solid #e8dfc8;
-      border-radius: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       font-size: 0.95rem;
       font-family: 'Inter', sans-serif;
-      background: #faf6ef;
-      color: #1a1a1a;
+      background: var(--surface-2);
+      color: var(--text);
       outline: none;
       transition: border-color 0.2s;
     }
-    .login-form input[type="email"]:focus {
-      border-color: #C08D5D;
-    }
+    .login-form input[type="email"]:focus { border-color: var(--accent); }
     .login-form button {
       padding: 0.75rem 1rem;
-      background: #C08D5D;
+      background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
-      transition: background 0.2s;
+      transition: opacity 0.2s;
     }
-    .login-form button:hover { background: #a87848; }
-    .login-form button:disabled { background: #d4b899; cursor: default; }
-    .login-status {
-      font-size: 0.85rem;
-      color: #4a7c59;
-      text-align: center;
-      min-height: 1.2em;
-    }
-    .login-status.error { color: #dc2626; }
+    .login-form button:hover { opacity: 0.85; }
+    .login-form button:disabled { opacity: 0.4; cursor: default; }
+    .login-status { font-size: 0.85rem; color: #6ab06a; text-align: center; min-height: 1.2em; }
+    .login-status.error { color: #f87171; }
 
-    /* ── Header ────────────────────────────────────────── */
-    .dash-header {
-      background: #1a1201;
-      color: #f5f0e8;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-    }
-    .header-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0.75rem 1.5rem;
+    /* ── Sidebar layout ────────────────────────────────── */
+    #dashboard-view { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0;
       display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      z-index: 50;
     }
-    .brand-row {
+    .sidebar-brand {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      flex-shrink: 0;
+      padding: 1.25rem 1.25rem 1rem;
+      border-bottom: 1px solid var(--border);
     }
     .nz-badge-sm {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #2d2000;
-      border: 1px solid #C08D5D;
+      background: var(--surface-2);
+      border: 1.5px solid var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Playfair Display', serif;
       font-size: 0.85rem;
-      color: #C08D5D;
+      color: var(--accent);
       font-weight: 600;
       flex-shrink: 0;
     }
-    .brand-title-sm {
+    .sidebar-wordmark { display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-wordmark .brand-name {
       font-family: 'Playfair Display', serif;
-      font-size: 1rem;
-      color: #f5f0e8;
-      line-height: 1.2;
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .brand-tagline {
-      font-size: 0.7rem;
-      color: #9a8c6a;
-      letter-spacing: 0.04em;
+    .sidebar-wordmark .brand-sub {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
     }
-    .header-actions {
-      margin-left: auto;
+    .sidebar-nav { padding: 1.25rem 0.75rem; flex: 1; overflow-y: auto; }
+    .sidebar-nav-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      padding: 0 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .nav-link {
       display: flex;
       align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.15s;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      margin-bottom: 0.1rem;
+    }
+    .nav-link:hover { background: var(--surface-2); color: var(--text); }
+    .nav-link.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+    .nav-icon { font-size: 0.9rem; opacity: 0.7; width: 16px; text-align: center; flex-shrink: 0; }
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
       gap: 0.5rem;
+    }
+    .sidebar-user {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .signout-btn {
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+      text-align: left;
+      width: 100%;
+    }
+    .signout-btn:hover { border-color: #f87171; color: #f87171; }
+
+    /* ── Main area ─────────────────────────────────────── */
+    .main-area {
+      margin-left: 240px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-width: 0;
+    }
+
+    /* ── Top bar ───────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.75rem;
+      border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
+      gap: 0.75rem;
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .topbar-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+    /* Date filter — segmented pills */
+    .date-pills {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
     }
     .df-btn {
-      padding: 0.3rem 0.7rem;
-      border: 1px solid #4a3a1a;
+      padding: 0.38rem 0.7rem;
+      border: none;
+      border-right: 1px solid var(--border);
       background: transparent;
-      color: #b8a888;
-      font-size: 0.75rem;
-      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.76rem;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .df-btn:hover { border-color: #C08D5D; color: #e8d8b8; }
-    .df-btn.active { background: #C08D5D; border-color: #C08D5D; color: #1a1201; font-weight: 600; }
-    .header-actions .icon-btn {
-      padding: 0.3rem 0.7rem;
-      border: 1px solid #4a3a1a;
+    .df-btn:last-child { border-right: none; }
+    .df-btn:hover { background: var(--surface-2); color: var(--text); }
+    .df-btn.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+    .icon-btn {
+      padding: 0.38rem 0.65rem;
+      border: 1px solid var(--border);
       background: transparent;
-      color: #b8a888;
-      font-size: 0.75rem;
-      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-radius: 7px;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .header-actions .icon-btn:hover { border-color: #C08D5D; color: #e8d8b8; }
-    .signout-btn {
-      padding: 0.3rem 0.8rem;
-      border: 1px solid #6b2020;
-      background: transparent;
-      color: #c88888;
-      font-size: 0.75rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.15s;
-    }
-    .signout-btn:hover { background: #6b2020; color: #fff; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Custom date row */
     .custom-date-row {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0.5rem 1.5rem 0.75rem;
+      padding: 0.5rem 1.75rem 0.75rem;
       display: flex;
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
     }
     .custom-date-row label {
       display: flex;
       align-items: center;
       gap: 0.4rem;
       font-size: 0.8rem;
-      color: #b8a888;
+      color: var(--text-muted);
     }
     .custom-date-row input[type="date"] {
       padding: 0.25rem 0.5rem;
-      border: 1px solid #4a3a1a;
-      background: #2d2000;
-      color: #f5f0e8;
-      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 5px;
       font-family: 'Inter', sans-serif;
       font-size: 0.8rem;
     }
     .custom-date-row button {
-      padding: 0.25rem 0.75rem;
-      background: #C08D5D;
-      color: #1a1201;
+      padding: 0.28rem 0.75rem;
+      background: var(--accent);
+      color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
@@ -247,36 +334,30 @@
 
     /* ── Error banner ──────────────────────────────────── */
     .error-banner {
-      background: #fef2f2;
-      border-bottom: 2px solid #fca5a5;
-      padding: 0.75rem 1.5rem;
+      background: rgba(248,71,71,0.07);
+      border-bottom: 1px solid rgba(248,71,71,0.25);
+      padding: 0.75rem 1.75rem;
       display: flex;
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
     }
-    .error-banner span {
-      color: #dc2626;
-      font-size: 0.85rem;
-      flex: 1;
-    }
+    .error-banner span { color: #f87171; font-size: 0.85rem; flex: 1; }
     .error-banner button {
       padding: 0.3rem 0.75rem;
-      background: #dc2626;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
+      background: transparent;
+      border: 1px solid rgba(248,71,71,0.4);
+      color: #f87171;
+      border-radius: 6px;
       font-size: 0.8rem;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
       white-space: nowrap;
     }
 
-    /* ── Main layout ───────────────────────────────────── */
+    /* ── Main content ──────────────────────────────────── */
     .dash-main {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 1.5rem;
+      padding: 1.75rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -291,34 +372,31 @@
     @media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 500px) { .kpi-strip { grid-template-columns: 1fr; } }
     .kpi-card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 1.25rem 1.25rem 1rem;
-      box-shadow: 0 2px 12px rgba(160,120,60,0.07);
-      border-left: 3px solid #C08D5D;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 0.2rem;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.3);
+    }
+    .kpi-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
     }
     .kpi-num {
       font-family: 'Playfair Display', serif;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 600;
-      color: #1a1201;
+      color: var(--text);
       line-height: 1;
+      margin: 0.25rem 0 0.1rem;
     }
-    .kpi-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #9a8c7a;
-    }
-    .kpi-meaning {
-      font-size: 0.82rem;
-      color: #5a5040;
-      margin-top: 0.2rem;
-    }
+    .kpi-meaning { font-size: 0.79rem; color: var(--text-muted); }
 
     /* ── Pillars ───────────────────────────────────────── */
     .pillars-grid {
@@ -330,157 +408,154 @@
     @media (max-width: 1100px) { .pillars-grid { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 700px)  { .pillars-grid { grid-template-columns: 1fr; } }
     .pillar {
-      background: #fff;
-      border-radius: 10px;
-      padding: 1.25rem;
-      box-shadow: 0 2px 12px rgba(160,120,60,0.07);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1rem;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.3);
     }
     .pillar-header {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
       flex-wrap: wrap;
     }
-    .pillar-header h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.1rem;
-      color: #1a1201;
-    }
+    .pillar-header h2 { font-size: 0.92rem; font-weight: 600; color: var(--text); }
     .badge-tag {
-      font-size: 0.68rem;
-      background: #f0e8d8;
-      color: #9a7040;
-      padding: 0.15rem 0.5rem;
+      font-size: 0.64rem;
+      font-weight: 500;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      padding: 0.18rem 0.55rem;
       border-radius: 99px;
+      border: 1px solid var(--border);
       white-space: nowrap;
     }
-    .badge-tag.period { background: #e8f0f8; color: #3a5a80; }
+    .badge-tag.period { color: var(--accent); border-color: rgba(200,121,74,0.3); background: var(--accent-soft); }
 
-    /* ── Trend pillar ──────────────────────────────────── */
+    /* ── Trend ─────────────────────────────────────────── */
     .trend-summary {
-      font-size: 0.88rem;
-      color: #3a3020;
-      background: #f5f0e0;
-      border-radius: 6px;
-      padding: 0.6rem 0.8rem;
+      font-size: 0.83rem;
+      color: var(--text);
+      background: var(--surface-2);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.65rem 0.9rem;
       line-height: 1.5;
     }
-    .trend-cancel {
-      font-size: 0.82rem;
-      color: #7a6050;
-    }
-    .chart-wrap {
-      position: relative;
-      height: 200px;
-    }
+    .trend-cancel { font-size: 0.78rem; color: var(--text-muted); }
+    .chart-wrap { position: relative; height: 200px; }
 
-    /* ── Segments pillar ───────────────────────────────── */
+    /* ── Segments ──────────────────────────────────────── */
     .seg-tabs {
       display: flex;
-      gap: 0.5rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      width: fit-content;
     }
     .seg-tab {
-      padding: 0.25rem 0.7rem;
-      border: 1.5px solid #e8dfc8;
-      border-radius: 4px;
-      font-size: 0.78rem;
-      cursor: pointer;
+      padding: 0.3rem 0.85rem;
+      border: none;
+      border-right: 1px solid var(--border);
       background: transparent;
-      color: #7a6a50;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      cursor: pointer;
       font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .seg-tab:hover { border-color: #C08D5D; color: #8b5a2a; }
-    .seg-tab.active { background: #C08D5D; border-color: #C08D5D; color: #fff; font-weight: 600; }
-    .seg-cards { display: flex; flex-direction: column; gap: 0.6rem; }
+    .seg-tab:last-child { border-right: none; }
+    .seg-tab:hover { background: var(--surface); color: var(--text); }
+    .seg-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .seg-cards { display: flex; flex-direction: column; gap: 0.55rem; }
     .seg-card {
-      border: 1px solid #f0e8d8;
-      border-radius: 7px;
-      padding: 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 0.85rem;
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.4rem;
     }
     .seg-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-    .seg-label { font-weight: 600; font-size: 0.88rem; color: #1a1201; }
-    .seg-count { font-size: 0.78rem; color: #9a8c7a; }
-    .seg-meaning { font-size: 0.78rem; color: #6a5a40; font-style: italic; }
-    .seg-bar-track { background: #f0e8d8; border-radius: 3px; height: 5px; margin: 0.1rem 0; }
-    .seg-bar { background: #C08D5D; border-radius: 3px; height: 5px; transition: width 0.4s; }
-    .seg-value { font-size: 0.82rem; font-weight: 600; color: #4a3010; }
-    .seg-action { font-size: 0.78rem; color: #C08D5D; font-weight: 500; }
-    /* RFM variant */
-    .rfm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-    .rfm-score { font-size: 0.75rem; color: #9a8c7a; }
-
-    /* ── Leads pillar ──────────────────────────────────── */
-    .leads-filter-row {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+    .seg-label { font-weight: 600; font-size: 0.86rem; color: var(--text); }
+    .seg-count { font-size: 0.74rem; color: var(--text-muted); }
+    .seg-meaning { font-size: 0.76rem; color: var(--text-muted); font-style: italic; }
+    .seg-bar-track {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      height: 4px;
+      margin: 0.1rem 0;
     }
+    .seg-bar { background: var(--accent); border-radius: 3px; height: 4px; transition: width 0.4s; }
+    .seg-value { font-size: 0.82rem; font-weight: 600; color: var(--accent); }
+    .seg-action { font-size: 0.75rem; color: var(--text-muted); }
+    .rfm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .rfm-score { font-size: 0.74rem; color: var(--text-muted); }
+
+    /* ── Leads ─────────────────────────────────────────── */
+    .leads-filter-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .lf-btn {
       padding: 0.28rem 0.65rem;
-      border: 1.5px solid #e8dfc8;
-      border-radius: 4px;
-      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 0.74rem;
       cursor: pointer;
       background: transparent;
-      color: #7a6a50;
+      color: var(--text-muted);
       font-family: 'Inter', sans-serif;
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .lf-btn:hover { border-color: #C08D5D; color: #8b5a2a; }
-    .lf-btn.active { background: #C08D5D; border-color: #C08D5D; color: #fff; font-weight: 600; }
-    .lf-btn.hot { border-color: #f59e0b; color: #92400e; }
-    .lf-btn.hot.active { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+    .lf-btn:hover { border-color: var(--accent); color: var(--text); }
+    .lf-btn.active { background: var(--accent-soft); border-color: rgba(200,121,74,0.4); color: var(--accent); font-weight: 600; }
+    .lf-btn.hot { border-color: rgba(200,121,74,0.35); color: var(--accent); }
+    .lf-btn.hot.active { background: var(--accent-soft); }
     .table-wrap { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.81rem; }
     th {
       text-align: left;
-      padding: 0.5rem 0.6rem;
-      border-bottom: 2px solid #e8dfc8;
-      color: #7a6a50;
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
       font-weight: 600;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       cursor: pointer;
       white-space: nowrap;
       user-select: none;
     }
-    th:hover { color: #C08D5D; }
-    th.sorted-asc::after  { content: ' ↑'; color: #C08D5D; }
-    th.sorted-desc::after { content: ' ↓'; color: #C08D5D; }
+    th:hover { color: var(--accent); }
+    th.sorted-asc::after  { content: ' ↑'; color: var(--accent); }
+    th.sorted-desc::after { content: ' ↓'; color: var(--accent); }
     td {
-      padding: 0.45rem 0.6rem;
-      border-bottom: 1px solid #f5f0e8;
-      color: #2a2010;
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
       vertical-align: middle;
     }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #faf6ef; }
-    .hot-row td { background: #fffbeb !important; }
-    .hot-row:hover td { background: #fef3c7 !important; }
+    tr:hover td { background: var(--surface-2); }
+    .hot-row td { background: rgba(200,121,74,0.06) !important; }
+    .hot-row:hover td { background: rgba(200,121,74,0.12) !important; }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    td.mono { font-family: 'Courier New', monospace; font-size: 0.8rem; }
+    td.mono { font-family: 'Courier New', monospace; font-size: 0.77rem; color: var(--text-muted); }
     .lead-tag {
       display: inline-block;
-      padding: 0.15rem 0.5rem;
+      padding: 0.14rem 0.55rem;
       border-radius: 99px;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 500;
     }
-    .empty-td { text-align: center; color: #9a8c7a; padding: 1.5rem; }
+    .empty-td { text-align: center; color: var(--text-muted); padding: 1.5rem; }
 
     /* ── Pagination ────────────────────────────────────── */
     .leads-pagination {
@@ -488,38 +563,57 @@
       align-items: center;
       justify-content: center;
       gap: 0.75rem;
-      padding-top: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
     }
     .leads-pagination button {
-      padding: 0.28rem 0.7rem;
-      border: 1.5px solid #e8dfc8;
-      border-radius: 4px;
+      padding: 0.3rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
       background: transparent;
-      color: #7a6a50;
-      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-size: 0.77rem;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .leads-pagination button:hover:not(:disabled) { border-color: #C08D5D; color: #8b5a2a; }
-    .leads-pagination button:disabled { opacity: 0.35; cursor: default; }
-    .page-info { font-size: 0.78rem; color: #9a8c7a; min-width: 8rem; text-align: center; }
+    .leads-pagination button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .leads-pagination button:disabled { opacity: 0.25; cursor: default; }
+    .page-info { font-size: 0.77rem; color: var(--text-muted); min-width: 8rem; text-align: center; }
 
     /* ── Acquisition note ──────────────────────────────── */
     .acq-note {
-      font-size: 0.82rem;
-      color: #7a6a50;
-      background: #f5f0e8;
-      border-radius: 6px;
-      padding: 0.6rem 1rem;
+      font-size: 0.79rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
     }
 
     /* ── Misc ──────────────────────────────────────────── */
-    .empty-state {
-      color: #9a8c7a;
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 1rem 0;
+    .empty-state { color: var(--text-muted); font-size: 0.84rem; text-align: center; padding: 1.5rem 0; }
+
+    /* ── Responsive: sidebar collapses on narrow screens ── */
+    @media (max-width: 768px) {
+      #dashboard-view { flex-direction: column; }
+      .sidebar {
+        position: relative;
+        width: 100%;
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .sidebar-brand { padding: 0; border-bottom: none; flex: 1; }
+      .sidebar-nav, .sidebar-footer { display: none; }
+      .main-area { margin-left: 0; }
+      .topbar { position: relative; }
     }
   </style>
 </head>
@@ -542,135 +636,156 @@
 <!-- ═══════════════════════ DASHBOARD VIEW ═══════════════════════ -->
 <div id="dashboard-view" style="display:none">
 
-  <!-- Header -->
-  <header class="dash-header">
-    <div class="header-inner">
-      <div class="brand-row">
-        <div class="nz-badge-sm">NZ</div>
-        <div>
-          <div class="brand-title-sm">NZ Coffee Intelligence</div>
-          <div class="brand-tagline">The taste you never forget</div>
-        </div>
-      </div>
-      <div class="header-actions" id="date-filter-strip">
-        <button class="df-btn active" data-mode="month">This Month</button>
-        <button class="df-btn" data-mode="prevmonth">Prev Month</button>
-        <button class="df-btn" data-mode="90d">Last 90d</button>
-        <button class="df-btn" data-mode="all">All Time</button>
-        <button class="df-btn" data-mode="custom">Custom…</button>
-        <button class="icon-btn" id="refresh-hdr-btn">↺ Refresh</button>
-        <button class="signout-btn" id="signout-btn">Sign out</button>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="nz-badge-sm">NZ</div>
+      <div class="sidebar-wordmark">
+        <span class="brand-name">NZ Coffee Intelligence</span>
+        <span class="brand-sub">The taste you never forget</span>
       </div>
     </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-label">MAIN</div>
+      <a class="nav-link active" href="#kpi-section"><span class="nav-icon">◈</span> Overview</a>
+      <a class="nav-link" href="#trend-section"><span class="nav-icon">↗</span> Booking Trends</a>
+      <a class="nav-link" href="#segments-section"><span class="nav-icon">◉</span> Segments</a>
+      <a class="nav-link" href="#leads-section"><span class="nav-icon">≡</span> Customers &amp; Leads</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="sidebar-user-email" class="sidebar-user"></span>
+      <button id="signout-btn" class="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main area -->
+  <div class="main-area">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <span class="topbar-title">Dashboard</span>
+      <div class="topbar-right">
+        <div class="date-pills" id="date-filter-strip">
+          <button class="df-btn active" data-mode="month">This Month</button>
+          <button class="df-btn" data-mode="prevmonth">Prev Month</button>
+          <button class="df-btn" data-mode="90d">Last 90d</button>
+          <button class="df-btn" data-mode="all">All Time</button>
+          <button class="df-btn" data-mode="custom">Custom…</button>
+        </div>
+        <button class="icon-btn" id="refresh-hdr-btn">↺</button>
+      </div>
+    </div>
+
+    <!-- Custom date row -->
     <div class="custom-date-row" id="custom-date-row" style="display:none">
       <label>From <input type="date" id="date-from" /></label>
       <label>To <input type="date" id="date-to" /></label>
       <button id="apply-custom-btn">Apply</button>
     </div>
-  </header>
 
-  <!-- Error banner -->
-  <div id="error-banner" class="error-banner" style="display:none">
-    <span id="error-msg"></span>
-    <button id="refresh-err-btn">Refresh data</button>
-  </div>
-
-  <main class="dash-main">
-
-    <!-- KPI strip -->
-    <section class="kpi-strip">
-      <div class="kpi-card" id="kpi-customers">
-        <div class="kpi-num">—</div>
-        <div class="kpi-label">Total customers</div>
-        <div class="kpi-meaning">Loading…</div>
-      </div>
-      <div class="kpi-card" id="kpi-signal">
-        <div class="kpi-num">—</div>
-        <div class="kpi-label">Online vs walk-in spend</div>
-        <div class="kpi-meaning">Loading…</div>
-      </div>
-      <div class="kpi-card" id="kpi-revenue">
-        <div class="kpi-num">—</div>
-        <div class="kpi-label">Lifetime revenue</div>
-        <div class="kpi-meaning">Loading…</div>
-      </div>
-      <div class="kpi-card" id="kpi-bookings">
-        <div class="kpi-num">—</div>
-        <div class="kpi-label">Confirmed bookings</div>
-        <div class="kpi-meaning">Loading…</div>
-      </div>
-    </section>
-
-    <!-- Three pillars -->
-    <div class="pillars-grid">
-
-      <!-- Pillar 1: Booking trends -->
-      <section class="pillar">
-        <div class="pillar-header">
-          <h2>Booking Trends</h2>
-          <span class="badge-tag period">Date filter applies</span>
-        </div>
-        <div id="trend-summary" class="trend-summary">Loading…</div>
-        <div id="trend-cancel" class="trend-cancel"></div>
-        <div class="chart-wrap">
-          <canvas id="trend-chart"></canvas>
-        </div>
-      </section>
-
-      <!-- Pillar 2: Segments -->
-      <section class="pillar">
-        <div class="pillar-header">
-          <h2>Customer Segments</h2>
-          <span class="badge-tag">All-time snapshot</span>
-        </div>
-        <div class="seg-tabs">
-          <button class="seg-tab active" id="tab-plain">Plain English</button>
-          <button class="seg-tab" id="tab-rfm">Technical detail</button>
-        </div>
-        <div id="segments-container" class="seg-cards"></div>
-      </section>
-
-      <!-- Pillar 3: Leads list -->
-      <section class="pillar">
-        <div class="pillar-header">
-          <h2>Customers &amp; Leads</h2>
-          <span class="badge-tag">All-time</span>
-        </div>
-        <div class="leads-filter-row" id="leads-filter-strip">
-          <button class="lf-btn active" data-filter="all">All</button>
-          <button class="lf-btn" data-filter="bookers">Customers who book</button>
-          <button class="lf-btn" data-filter="walkins">Walk-ins</button>
-          <button class="lf-btn hot" data-filter="hot">🔥 Hot leads</button>
-        </div>
-        <div class="table-wrap">
-          <table id="leads-table">
-            <thead>
-              <tr>
-                <th data-col="name">Name</th>
-                <th data-col="phone_e164">Phone</th>
-                <th data-col="total_spent" class="sorted-desc">Spend</th>
-                <th data-col="total_visits">Visits</th>
-                <th data-col="last_visit">Last visit</th>
-                <th data-col="total_bookings">Bookings</th>
-                <th data-col="lead_type">Type</th>
-              </tr>
-            </thead>
-            <tbody id="leads-tbody"></tbody>
-          </table>
-        </div>
-        <div class="leads-pagination">
-          <button id="leads-prev" disabled>← Prev</button>
-          <span id="leads-page-info" class="page-info">—</span>
-          <button id="leads-next">Next →</button>
-        </div>
-      </section>
-
+    <!-- Error banner -->
+    <div id="error-banner" class="error-banner" style="display:none">
+      <span id="error-msg"></span>
+      <button id="refresh-err-btn">Refresh data</button>
     </div>
 
-    <!-- Acquisition note -->
-    <div id="acq-note" class="acq-note">Loading acquisition data…</div>
+    <main class="dash-main">
 
-  </main>
+      <!-- KPI strip -->
+      <section id="kpi-section" class="kpi-strip">
+        <div class="kpi-card" id="kpi-customers">
+          <div class="kpi-num">—</div>
+          <div class="kpi-label">Total customers</div>
+          <div class="kpi-meaning">Loading…</div>
+        </div>
+        <div class="kpi-card" id="kpi-signal">
+          <div class="kpi-num">—</div>
+          <div class="kpi-label">Online vs walk-in spend</div>
+          <div class="kpi-meaning">Loading…</div>
+        </div>
+        <div class="kpi-card" id="kpi-revenue">
+          <div class="kpi-num">—</div>
+          <div class="kpi-label">Lifetime revenue</div>
+          <div class="kpi-meaning">Loading…</div>
+        </div>
+        <div class="kpi-card" id="kpi-bookings">
+          <div class="kpi-num">—</div>
+          <div class="kpi-label">Confirmed bookings</div>
+          <div class="kpi-meaning">Loading…</div>
+        </div>
+      </section>
+
+      <!-- Three pillars -->
+      <div class="pillars-grid">
+
+        <!-- Pillar 1: Booking trends -->
+        <section id="trend-section" class="pillar">
+          <div class="pillar-header">
+            <h2>Booking Trends</h2>
+            <span class="badge-tag period">Date filter applies</span>
+          </div>
+          <div id="trend-summary" class="trend-summary">Loading…</div>
+          <div id="trend-cancel" class="trend-cancel"></div>
+          <div class="chart-wrap">
+            <canvas id="trend-chart"></canvas>
+          </div>
+        </section>
+
+        <!-- Pillar 2: Segments -->
+        <section id="segments-section" class="pillar">
+          <div class="pillar-header">
+            <h2>Customer Segments</h2>
+            <span class="badge-tag">All-time snapshot</span>
+          </div>
+          <div class="seg-tabs">
+            <button class="seg-tab active" id="tab-plain">Plain English</button>
+            <button class="seg-tab" id="tab-rfm">Technical detail</button>
+          </div>
+          <div id="segments-container" class="seg-cards"></div>
+        </section>
+
+        <!-- Pillar 3: Leads list -->
+        <section id="leads-section" class="pillar">
+          <div class="pillar-header">
+            <h2>Customers &amp; Leads</h2>
+            <span class="badge-tag">All-time</span>
+          </div>
+          <div class="leads-filter-row" id="leads-filter-strip">
+            <button class="lf-btn active" data-filter="all">All</button>
+            <button class="lf-btn" data-filter="bookers">Customers who book</button>
+            <button class="lf-btn" data-filter="walkins">Walk-ins</button>
+            <button class="lf-btn hot" data-filter="hot">🔥 Hot leads</button>
+          </div>
+          <div class="table-wrap">
+            <table id="leads-table">
+              <thead>
+                <tr>
+                  <th data-col="name">Name</th>
+                  <th data-col="phone_e164">Phone</th>
+                  <th data-col="total_spent" class="sorted-desc">Spend</th>
+                  <th data-col="total_visits">Visits</th>
+                  <th data-col="last_visit">Last visit</th>
+                  <th data-col="total_bookings">Bookings</th>
+                  <th data-col="lead_type">Type</th>
+                </tr>
+              </thead>
+              <tbody id="leads-tbody"></tbody>
+            </table>
+          </div>
+          <div class="leads-pagination">
+            <button id="leads-prev" disabled>← Prev</button>
+            <span id="leads-page-info" class="page-info">—</span>
+            <button id="leads-next">Next →</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Acquisition note -->
+      <div id="acq-note" class="acq-note">Loading acquisition data…</div>
+
+    </main>
+  </div>
 </div>
 
 <!-- ═══════════════════════ SCRIPT ═══════════════════════════════ -->
@@ -730,7 +845,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
       return;
     }
     document.getElementById('login-view').style.display    = 'none';
-    document.getElementById('dashboard-view').style.display = 'block';
+    document.getElementById('dashboard-view').style.display = 'flex';
+    document.getElementById('sidebar-user-email').textContent = session.user.email;
     loadData();
   }
 
@@ -1020,8 +1136,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
       type: 'bar',
       label: 'Bookings',
       data: counts,
-      backgroundColor: 'rgba(192,141,93,0.75)',
-      borderColor: '#C08D5D',
+      backgroundColor: 'rgba(200,121,74,0.7)',
+      borderColor: '#c8794a',
       borderWidth: 1,
       borderRadius: 3,
       yAxisID: 'y',
@@ -1032,14 +1148,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
         type: 'line',
         label: 'Pax',
         data: paxVals,
-        borderColor: '#5a3010',
+        borderColor: '#f5f3ee',
         backgroundColor: 'transparent',
         tension: 0.35,
         pointRadius: 3,
-        pointBackgroundColor: '#5a3010',
+        pointBackgroundColor: '#f5f3ee',
         yAxisID: 'y1',
       });
     }
+
+    const gridColor  = 'rgba(255,255,255,0.06)';
+    const tickColor  = '#8a8a92';
+    const tickFont   = { family: 'Inter', size: 10, color: tickColor };
 
     trendChart = new Chart(ctx, {
       data: { labels, datasets },
@@ -1048,14 +1168,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { display: realPax, labels: { font: { family: 'Inter', size: 11 } } },
+          legend: {
+            display: realPax,
+            labels: { font: { family: 'Inter', size: 11 }, color: tickColor },
+          },
         },
         scales: {
           y: {
             type: 'linear',
             position: 'left',
             beginAtZero: true,
-            ticks: { stepSize: 1, font: { family: 'Inter', size: 10 } },
+            grid: { color: gridColor },
+            ticks: { stepSize: 1, font: tickFont, color: tickColor },
             title: { display: false },
           },
           ...(realPax ? {
@@ -1063,11 +1187,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
               type: 'linear',
               position: 'right',
               beginAtZero: true,
-              grid: { drawOnChartArea: false },
-              ticks: { font: { family: 'Inter', size: 10 } },
+              grid: { drawOnChartArea: false, color: gridColor },
+              ticks: { font: tickFont, color: tickColor },
             }
           } : {}),
-          x: { ticks: { font: { family: 'Inter', size: 10 } } }
+          x: {
+            grid: { color: gridColor },
+            ticks: { font: tickFont, color: tickColor },
+          }
         }
       }
     });
